@@ -1,0 +1,7 @@
+<extensions>
+    <extension>
+        <groupId>com.github.seregamorph</groupId>
+        <artifactId>maven-half-life-builder</artifactId>
+        <version>0.1-SNAPSHOT</version>
+    </extension>
+</extensions>
