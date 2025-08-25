@@ -1,10 +1,7 @@
 package com.github.seregamorph.maven.halflife;
 
 import com.github.seregamorph.maven.halflife.graph.ConcurrencyDependencyGraph2;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -61,7 +58,7 @@ public class HalfLifeBuilder implements Builder {
         ProjectBuildList projectBuilds,
         List<TaskSegment> taskSegments,
         ReactorBuildStatus reactorBuildStatus
-    ) throws ExecutionException, InterruptedException {
+    ) throws InterruptedException {
         int nThreads = Math.min(
             session.getRequest().getDegreeOfConcurrency(),
             session.getProjects().size());
@@ -82,11 +79,10 @@ public class HalfLifeBuilder implements Builder {
 
         for (TaskSegment taskSegment : taskSegments) {
             ProjectBuildList segmentProjectBuilds = projectBuilds.getByTaskSegment(taskSegment);
-            Map<MavenProject, ProjectSegment> projectBuildMap = projectBuilds.selectSegment(taskSegment);
             try {
                 ConcurrencyDependencyGraph2 analyzer =
                     new ConcurrencyDependencyGraph2(segmentProjectBuilds, session.getProjectDependencyGraph());
-                new Scheduler(session, reactorContext, service, analyzer, taskSegment, projectBuildMap)
+                new Scheduler(session, reactorContext, service, analyzer, taskSegment)
                     .multiThreadedProjectTaskSegmentBuild();
                 if (reactorContext.getReactorBuildStatus().isHalted()) {
                     break;
@@ -108,26 +104,19 @@ public class HalfLifeBuilder implements Builder {
         private final OrderedCompletionService<MavenProject> service;
         private final ConcurrencyDependencyGraph2 analyzer;
         private final TaskSegment taskSegment;
-        private final Map<MavenProject, ProjectSegment> projectBuildMap;
-
-        private final Set<String> duplicateArtifactIds;
 
         private Scheduler(
             MavenSession rootSession,
             ReactorContext reactorContext,
             OrderedCompletionService<MavenProject> service,
             ConcurrencyDependencyGraph2 analyzer,
-            TaskSegment taskSegment,
-            Map<MavenProject, ProjectSegment> projectBuildMap
+            TaskSegment taskSegment
         ) {
             this.rootSession = rootSession;
             this.reactorContext = reactorContext;
             this.service = service;
             this.analyzer = analyzer;
             this.taskSegment = taskSegment;
-            this.projectBuildMap = projectBuildMap;
-
-            duplicateArtifactIds = gatherDuplicateArtifactIds(projectBuildMap.keySet());
         }
 
         private void multiThreadedProjectTaskSegmentBuild() {
@@ -152,38 +141,25 @@ public class HalfLifeBuilder implements Builder {
 
         private void scheduleProjects(List<MavenProject> projects) {
             for (MavenProject mavenProject : projects) {
-                ProjectSegment projectSegment = projectBuildMap.get(mavenProject);
-                logger.debug("Scheduling: {}", projectSegment);
+                logger.debug("Scheduling: {}", mavenProject);
                 service.submit(0, () -> {
                     Thread currentThread = Thread.currentThread();
                     String originalThreadName = currentThread.getName();
-                    MavenProject project = projectSegment.getProject();
 
-                    String threadNameSuffix = duplicateArtifactIds.contains(project.getArtifactId())
-                        ? project.getGroupId() + ":" + project.getArtifactId()
-                        : project.getArtifactId();
+                    String threadNameSuffix = mavenProject.getGroupId() + ":" + mavenProject.getArtifactId();
                     currentThread.setName("mvn-builder-" + threadNameSuffix);
                     try {
-                        lifecycleModuleBuilder.buildProject(
-                            projectSegment.getSession(), rootSession, reactorContext, project, taskSegment);
+                        // Implementation notice: in the original code the lifecycleModuleBuilder.buildProject
+                        // received projectSegment.getSession() and rootSession, which are equal since
+                        // Maven 3.9 (because MavenSession uses ThreadLocal), but are different in Maven 3.8
+                        lifecycleModuleBuilder.buildProject(rootSession, reactorContext, mavenProject, taskSegment);
                     } finally {
                         currentThread.setName(originalThreadName);
                     }
 
-                    return project;
+                    return mavenProject;
                 });
             }
         }
-    }
-
-    private static Set<String> gatherDuplicateArtifactIds(Set<MavenProject> projects) {
-        Set<String> artifactIds = new HashSet<>(projects.size());
-        Set<String> duplicateArtifactIds = new HashSet<>();
-        for (MavenProject project : projects) {
-            if (!artifactIds.add(project.getArtifactId())) {
-                duplicateArtifactIds.add(project.getArtifactId());
-            }
-        }
-        return duplicateArtifactIds;
     }
 }
