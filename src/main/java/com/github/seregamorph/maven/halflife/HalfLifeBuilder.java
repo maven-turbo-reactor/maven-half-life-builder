@@ -24,6 +24,7 @@ import org.apache.maven.lifecycle.internal.ReactorBuildStatus;
 import org.apache.maven.lifecycle.internal.ReactorContext;
 import org.apache.maven.lifecycle.internal.TaskSegment;
 import org.apache.maven.lifecycle.internal.builder.Builder;
+import org.apache.maven.plugin.MojosExecutionStrategy;
 import org.apache.maven.project.MavenProject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +43,15 @@ public class HalfLifeBuilder implements Builder {
     private final LifecycleModuleBuilder lifecycleModuleBuilder;
 
     @Inject
-    public HalfLifeBuilder(LifecycleModuleBuilder lifecycleModuleBuilder) {
+    public HalfLifeBuilder(
+        LifecycleModuleBuilder lifecycleModuleBuilder,
+        MojosExecutionStrategy mojosExecutionStrategy
+    ) {
         this.lifecycleModuleBuilder = lifecycleModuleBuilder;
+        if (!(mojosExecutionStrategy instanceof DelegatingMojosExecutionStrategy)) {
+            throw new IllegalStateException("Unexpected mojosExecutionStrategy: " + mojosExecutionStrategy
+                + ", expected type " + DelegatingMojosExecutionStrategy.class.getName());
+        }
     }
 
     @Override
