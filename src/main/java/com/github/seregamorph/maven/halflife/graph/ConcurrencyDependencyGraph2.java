@@ -50,7 +50,7 @@ public class ConcurrencyDependencyGraph2 {
         Set<MavenProject> result = new LinkedHashSet<>();
         for (ProjectSegment projectBuild : projectBuilds) {
             List<MavenProject> upstreamProjects =
-                projectDependencyGraph.getUpstreamProjects(projectBuild.getProject(), false);
+                projectDependencyGraph.getDirectUpstreamProjects(projectBuild.getProject());
             if (upstreamProjects.isEmpty()) {
                 result.add(projectBuild.getProject());
             }
@@ -68,9 +68,9 @@ public class ConcurrencyDependencyGraph2 {
 
     private List<MavenProject> getSchedulableNewProcesses(MavenProject finishedProject) {
         List<MavenProject> result = new ArrayList<>();
-        for (MavenProject dependentProject : projectDependencyGraph.getDownstreamProjects(finishedProject, false)) {
+        for (MavenProject dependentProject : projectDependencyGraph.getDirectDownstreamProjects(finishedProject)) {
             // todo List<ProjectKey>
-            List<MavenProject> upstreamProjects = projectDependencyGraph.getUpstreamProjects(dependentProject, false);
+            List<MavenProject> upstreamProjects = projectDependencyGraph.getDirectUpstreamProjects(dependentProject);
             if (finishedProjects.containsAll(upstreamProjects.stream().map(ProjectPartKey::new).collect(Collectors.toList()))) {
                 result.add(dependentProject);
             }

@@ -10,7 +10,7 @@ import org.apache.maven.project.MavenProject;
  */
 public interface ProjectDependencyGraph2 {
 
-    List<MavenProject> getDownstreamProjects(MavenProject project, boolean transitive);
+    List<MavenProject> getDirectDownstreamProjects(MavenProject project);
 
-    List<MavenProject> getUpstreamProjects(MavenProject project, boolean transitive);
+    List<MavenProject> getDirectUpstreamProjects(MavenProject project);
 }

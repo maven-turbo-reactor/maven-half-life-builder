@@ -24,20 +24,19 @@ class FilteredProjectDependencyGraph2 implements ProjectDependencyGraph2 {
         this.projectDependencyGraph = projectDependencyGraph;
 
         this.whiteList = new IdentityHashMap<>();
-
         for (MavenProject project : whiteList) {
             this.whiteList.put(project, null);
         }
     }
 
     @Override
-    public List<MavenProject> getDownstreamProjects(MavenProject project, boolean transitive) {
-        return applyFilter(projectDependencyGraph.getDownstreamProjects(project, transitive));
+    public List<MavenProject> getDirectDownstreamProjects(MavenProject project) {
+        return applyFilter(projectDependencyGraph.getDirectDownstreamProjects(project));
     }
 
     @Override
-    public List<MavenProject> getUpstreamProjects(MavenProject project, boolean transitive) {
-        return applyFilter(projectDependencyGraph.getUpstreamProjects(project, transitive));
+    public List<MavenProject> getDirectUpstreamProjects(MavenProject project) {
+        return applyFilter(projectDependencyGraph.getDirectUpstreamProjects(project));
     }
 
     private List<MavenProject> applyFilter(Collection<? extends MavenProject> projects) {

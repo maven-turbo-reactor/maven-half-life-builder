@@ -39,35 +39,17 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
     }
 
     @Override
-    public List<MavenProject> getDownstreamProjects(MavenProject project, boolean transitive) {
+    public List<MavenProject> getDirectDownstreamProjects(MavenProject project) {
         Objects.requireNonNull(project, "project cannot be null");
-        Set<String> projectIds = new HashSet<>();
-        getDownstreamProjects(ProjectSorter.getId(project), projectIds, transitive);
+        Set<String> projectIds = new HashSet<>(sorter.getDependents(ProjectSorter.getId(project)));
         return getSortedProjects(projectIds);
-    }
-
-    private void getDownstreamProjects(String projectId, Set<String> projectIds, boolean transitive) {
-        for (String id : sorter.getDependents(projectId)) {
-            if (projectIds.add(id) && transitive) {
-                getDownstreamProjects(id, projectIds, transitive);
-            }
-        }
     }
 
     @Override
-    public List<MavenProject> getUpstreamProjects(MavenProject project, boolean transitive) {
+    public List<MavenProject> getDirectUpstreamProjects(MavenProject project) {
         Objects.requireNonNull(project, "project cannot be null");
-        Set<String> projectIds = new HashSet<>();
-        getUpstreamProjects(ProjectSorter.getId(project), projectIds, transitive);
+        Set<String> projectIds = new HashSet<>(sorter.getDependencies(ProjectSorter.getId(project)));
         return getSortedProjects(projectIds);
-    }
-
-    private void getUpstreamProjects(String projectId, Collection<String> projectIds, boolean transitive) {
-        for (String id : sorter.getDependencies(projectId)) {
-            if (projectIds.add(id) && transitive) {
-                getUpstreamProjects(id, projectIds, transitive);
-            }
-        }
     }
 
     private List<MavenProject> getSortedProjects(Set<String> projectIds) {
