@@ -32,10 +32,12 @@ class FilteredProjectDependencyGraph2 implements ProjectDependencyGraph2 {
         }
     }
 
+    @Override
     public List<MavenProject> getAllProjects() {
         return this.projectDependencyGraph.getAllProjects();
     }
 
+    @Override
     public List<MavenProject> getSortedProjects() {
         if (sortedProjects == null) {
             sortedProjects = applyFilter(projectDependencyGraph.getSortedProjects());
@@ -44,10 +46,12 @@ class FilteredProjectDependencyGraph2 implements ProjectDependencyGraph2 {
         return new ArrayList<>(sortedProjects);
     }
 
+    @Override
     public List<MavenProject> getDownstreamProjects(MavenProject project, boolean transitive) {
         return applyFilter(projectDependencyGraph.getDownstreamProjects(project, transitive));
     }
 
+    @Override
     public List<MavenProject> getUpstreamProjects(MavenProject project, boolean transitive) {
         return applyFilter(projectDependencyGraph.getUpstreamProjects(project, transitive));
     }
