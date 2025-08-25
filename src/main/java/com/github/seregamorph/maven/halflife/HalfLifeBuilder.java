@@ -5,11 +5,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletionService;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -61,8 +62,15 @@ public class HalfLifeBuilder implements Builder {
         for (ProjectSegment segment : projectBuilds) {
             segment.getSession().setParallel(parallel);
         }
-        ExecutorService executor = Executors.newFixedThreadPool(nThreads, new BuildThreadFactory());
-        CompletionService<MavenProject> service = new ExecutorCompletionService<>(executor);
+        // executor supporting task ordering, prioritize building modules that have more downstream dependencies
+        ExecutorService executor = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
+            new PriorityBlockingQueue<>(), new BuildThreadFactory()) {
+            @Override
+            protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+                return new OrderedFutureTask<>((OrderedCallable<T>) callable);
+            }
+        };
+        OrderedCompletionService<MavenProject> service = new OrderedCompletionService<>(executor);
 
         for (TaskSegment taskSegment : taskSegments) {
             ProjectBuildList segmentProjectBuilds = projectBuilds.getByTaskSegment(taskSegment);
@@ -89,7 +97,7 @@ public class HalfLifeBuilder implements Builder {
 
         private final MavenSession rootSession;
         private final ReactorContext reactorContext;
-        private final CompletionService<MavenProject> service;
+        private final OrderedCompletionService<MavenProject> service;
         private final ConcurrencyDependencyGraph2 analyzer;
         private final TaskSegment taskSegment;
         private final Map<MavenProject, ProjectSegment> projectBuildMap;
@@ -99,7 +107,7 @@ public class HalfLifeBuilder implements Builder {
         private Scheduler(
             MavenSession rootSession,
             ReactorContext reactorContext,
-            CompletionService<MavenProject> service,
+            OrderedCompletionService<MavenProject> service,
             ConcurrencyDependencyGraph2 analyzer,
             TaskSegment taskSegment,
             Map<MavenProject, ProjectSegment> projectBuildMap
@@ -118,7 +126,7 @@ public class HalfLifeBuilder implements Builder {
             scheduleProjects(analyzer.getRootSchedulableBuilds());
             for (int i = 0; i < analyzer.getNumberOfBuilds(); i++) {
                 try {
-                    MavenProject project = service.take().get();
+                    MavenProject project = service.take();
                     if (reactorContext.getReactorBuildStatus().isHalted()) {
                         break;
                     }
@@ -138,7 +146,10 @@ public class HalfLifeBuilder implements Builder {
             for (MavenProject mavenProject : projects) {
                 ProjectSegment projectSegment = projectBuildMap.get(mavenProject);
                 logger.debug("Scheduling: {}", projectSegment);
-                service.submit(() -> {
+                List<MavenProject> downstreamDependencies = rootSession.getProjectDependencyGraph()
+                    .getDownstreamProjects(mavenProject, false);
+                // negate size for descending order
+                service.submit(-downstreamDependencies.size(), () -> {
                     Thread currentThread = Thread.currentThread();
                     String originalThreadName = currentThread.getName();
                     MavenProject project = projectSegment.getProject();
