@@ -1,4 +1,4 @@
-package com.github.seregamorph.maven.halflife;
+package com.github.seregamorph.maven.halflife.graph;
 
 /**
  * @author Sergey Chernov

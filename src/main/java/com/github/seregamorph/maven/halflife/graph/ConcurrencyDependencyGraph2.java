@@ -20,7 +20,7 @@ import org.codehaus.plexus.util.dag.CycleDetectedException;
  */
 public class ConcurrencyDependencyGraph2 {
 
-    private final Set<ProjectPartKey> finishedProjects = new HashSet<>();
+    private final Set<MavenProjectPart> finishedProjects = new HashSet<>();
 
     private final ProjectBuildList projectBuilds;
     private final ProjectDependencyGraph2 projectDependencyGraph;
@@ -29,8 +29,8 @@ public class ConcurrencyDependencyGraph2 {
         ProjectBuildList projectBuilds,
         ProjectDependencyGraph projectDependencyGraph
     ) throws CycleDetectedException, DuplicateProjectException {
-        this.projectDependencyGraph = getProjectDependencyGraph2(projectDependencyGraph);
         this.projectBuilds = projectBuilds;
+        this.projectDependencyGraph = getProjectDependencyGraph2(projectDependencyGraph);
     }
 
     private static FilteredProjectDependencyGraph2 getProjectDependencyGraph2(
@@ -62,7 +62,7 @@ public class ConcurrencyDependencyGraph2 {
     }
 
     public List<MavenProject> markAsFinished(MavenProject mavenProject) {
-        finishedProjects.add(new ProjectPartKey(mavenProject));
+        finishedProjects.add(new MavenProjectPart(mavenProject));
         return getSchedulableNewProcesses(mavenProject);
     }
 
@@ -71,7 +71,7 @@ public class ConcurrencyDependencyGraph2 {
         for (MavenProject dependentProject : projectDependencyGraph.getDirectDownstreamProjects(finishedProject)) {
             // todo List<ProjectKey>
             List<MavenProject> upstreamProjects = projectDependencyGraph.getDirectUpstreamProjects(dependentProject);
-            if (finishedProjects.containsAll(upstreamProjects.stream().map(ProjectPartKey::new).collect(Collectors.toList()))) {
+            if (finishedProjects.containsAll(upstreamProjects.stream().map(MavenProjectPart::new).collect(Collectors.toList()))) {
                 result.add(dependentProject);
             }
         }

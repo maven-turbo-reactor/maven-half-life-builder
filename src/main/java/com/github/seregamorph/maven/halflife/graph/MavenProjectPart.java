@@ -6,12 +6,12 @@ import org.apache.maven.project.MavenProject;
 /**
  * @author Sergey Chernov
  */
-final class ProjectPartKey {
+final class MavenProjectPart {
 
-    private final String gav;
+    private final MavenProject project;
 
-    ProjectPartKey(MavenProject project) {
-        this.gav = getGav(project);
+    MavenProjectPart(MavenProject project) {
+        this.project = project;
     }
 
     @Override
@@ -19,21 +19,22 @@ final class ProjectPartKey {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        ProjectPartKey that = (ProjectPartKey) o;
-        return Objects.equals(gav, that.gav);
+        MavenProjectPart that = (MavenProjectPart) o;
+        return project == that.project;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(gav);
+        return Objects.hashCode(project);
     }
 
     @Override
     public String toString() {
-        return gav;
+        return getGav(project);
     }
 
     private static String getGav(MavenProject project) {
+        // same as BuilderCommon.getKey()
         return project.getGroupId() + ':' + project.getArtifactId() + ':' + project.getVersion();
     }
 }
