@@ -154,10 +154,7 @@ public class HalfLifeBuilder implements Builder {
             for (MavenProject mavenProject : projects) {
                 ProjectSegment projectSegment = projectBuildMap.get(mavenProject);
                 logger.debug("Scheduling: {}", projectSegment);
-                List<MavenProject> downstreamDependencies = rootSession.getProjectDependencyGraph()
-                    .getDownstreamProjects(mavenProject, false);
-                // negate size for descending order
-                service.submit(-downstreamDependencies.size(), () -> {
+                service.submit(0, () -> {
                     Thread currentThread = Thread.currentThread();
                     String originalThreadName = currentThread.getName();
                     MavenProject project = projectSegment.getProject();
