@@ -17,8 +17,6 @@ class FilteredProjectDependencyGraph2 implements ProjectDependencyGraph2 {
     private final ProjectDependencyGraph2 projectDependencyGraph;
     private final Map<MavenProject, ?> whiteList;
 
-    private List<MavenProject> sortedProjects;
-
     FilteredProjectDependencyGraph2(
         ProjectDependencyGraph2 projectDependencyGraph,
         Collection<? extends MavenProject> whiteList
@@ -30,20 +28,6 @@ class FilteredProjectDependencyGraph2 implements ProjectDependencyGraph2 {
         for (MavenProject project : whiteList) {
             this.whiteList.put(project, null);
         }
-    }
-
-    @Override
-    public List<MavenProject> getAllProjects() {
-        return this.projectDependencyGraph.getAllProjects();
-    }
-
-    @Override
-    public List<MavenProject> getSortedProjects() {
-        if (sortedProjects == null) {
-            sortedProjects = applyFilter(projectDependencyGraph.getSortedProjects());
-        }
-
-        return new ArrayList<>(sortedProjects);
     }
 
     @Override
@@ -66,10 +50,5 @@ class FilteredProjectDependencyGraph2 implements ProjectDependencyGraph2 {
         }
 
         return filtered;
-    }
-
-    @Override
-    public String toString() {
-        return getSortedProjects().toString();
     }
 }

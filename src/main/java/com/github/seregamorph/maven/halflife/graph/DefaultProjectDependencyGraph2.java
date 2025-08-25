@@ -2,7 +2,6 @@ package com.github.seregamorph.maven.halflife.graph;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,12 +22,10 @@ import org.codehaus.plexus.util.dag.CycleDetectedException;
 public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
 
     private final ProjectSorter sorter;
-    private final List<MavenProject> allProjects;
     private final Map<MavenProject, Integer> order;
     private final Map<String, MavenProject> projects;
 
     public DefaultProjectDependencyGraph2(Collection<MavenProject> projects) throws CycleDetectedException, DuplicateProjectException {
-        this.allProjects = Collections.unmodifiableList(new ArrayList<>(projects));
         this.sorter = new ProjectSorter(projects);
         List<MavenProject> sorted = this.sorter.getSortedProjects();
         this.order = new HashMap<>(sorted.size());
@@ -39,16 +36,6 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
             this.projects.put(id, project);
             this.order.put(project, index++);
         }
-    }
-
-    @Override
-    public List<MavenProject> getAllProjects() {
-        return this.allProjects;
-    }
-
-    @Override
-    public List<MavenProject> getSortedProjects() {
-        return new ArrayList<>(sorter.getSortedProjects());
     }
 
     @Override
@@ -70,11 +57,8 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
     @Override
     public List<MavenProject> getUpstreamProjects(MavenProject project, boolean transitive) {
         Objects.requireNonNull(project, "project cannot be null");
-
         Set<String> projectIds = new HashSet<>();
-
         getUpstreamProjects(ProjectSorter.getId(project), projectIds, transitive);
-
         return getSortedProjects(projectIds);
     }
 
@@ -91,9 +75,7 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
         for (String projectId : projectIds) {
             result.add(projects.get(projectId));
         }
-
         result.sort(new MavenProjectComparator());
-
         return result;
     }
 
