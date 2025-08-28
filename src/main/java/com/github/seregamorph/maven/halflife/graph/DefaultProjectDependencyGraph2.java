@@ -7,11 +7,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectSorter;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 
 /**
@@ -22,8 +20,8 @@ import org.codehaus.plexus.util.dag.CycleDetectedException;
 public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
 
     private final ProjectSorter2 sorter;
-    private final Map<MavenProject, Integer> order;
-    private final Map<String, MavenProject> projects;
+    private final Map<MavenProjectPart, Integer> order;
+    private final Map<String, MavenProjectPart> projects;
 
     public DefaultProjectDependencyGraph2(Collection<MavenProject> projects) throws CycleDetectedException, DuplicateProjectException {
         this.sorter = new ProjectSorter2(projects);
@@ -32,28 +30,27 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
         this.projects = new HashMap<>(sorted.size());
         int index = 0;
         for (MavenProject project : sorted) {
-            String id = ProjectSorter.getId(project);
-            this.projects.put(id, project);
-            this.order.put(project, index++);
+            MavenProjectPart projectPart = new MavenProjectPart(project);
+            String id = projectPart.toString();
+            this.projects.put(id, projectPart);
+            this.order.put(projectPart, index++);
         }
     }
 
     @Override
-    public List<MavenProject> getDirectDownstreamProjects(MavenProject project) {
-        Objects.requireNonNull(project, "project cannot be null");
-        Set<String> projectIds = new HashSet<>(sorter.getDependents(ProjectSorter.getId(project)));
+    public List<MavenProjectPart> getDirectDownstreamProjects(MavenProjectPart projectPart) {
+        Set<String> projectIds = new HashSet<>(sorter.getDependents(projectPart.toString()));
         return getSortedProjects(projectIds);
     }
 
     @Override
-    public List<MavenProject> getDirectUpstreamProjects(MavenProject project) {
-        Objects.requireNonNull(project, "project cannot be null");
-        Set<String> projectIds = new HashSet<>(sorter.getDependencies(ProjectSorter.getId(project)));
+    public List<MavenProjectPart> getDirectUpstreamProjects(MavenProjectPart projectPart) {
+        Set<String> projectIds = new HashSet<>(sorter.getDependencies(projectPart.toString()));
         return getSortedProjects(projectIds);
     }
 
-    private List<MavenProject> getSortedProjects(Set<String> projectIds) {
-        List<MavenProject> result = new ArrayList<>(projectIds.size());
+    private List<MavenProjectPart> getSortedProjects(Set<String> projectIds) {
+        List<MavenProjectPart> result = new ArrayList<>(projectIds.size());
         for (String projectId : projectIds) {
             result.add(projects.get(projectId));
         }
@@ -66,9 +63,9 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
         return sorter.getSortedProjects().toString();
     }
 
-    private class MavenProjectComparator implements Comparator<MavenProject> {
+    private class MavenProjectComparator implements Comparator<MavenProjectPart> {
         @Override
-        public int compare(MavenProject o1, MavenProject o2) {
+        public int compare(MavenProjectPart o1, MavenProjectPart o2) {
             return order.get(o1) - order.get(o2);
         }
     }

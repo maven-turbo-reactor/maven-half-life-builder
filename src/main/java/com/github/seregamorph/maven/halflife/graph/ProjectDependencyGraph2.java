@@ -1,7 +1,6 @@
 package com.github.seregamorph.maven.halflife.graph;
 
 import java.util.List;
-import org.apache.maven.project.MavenProject;
 
 /**
  * Based on org.apache.maven.graph.ProjectDependencyGraph from maven-core.
@@ -10,7 +9,7 @@ import org.apache.maven.project.MavenProject;
  */
 public interface ProjectDependencyGraph2 {
 
-    List<MavenProject> getDirectDownstreamProjects(MavenProject project);
+    List<MavenProjectPart> getDirectDownstreamProjects(MavenProjectPart projectPart);
 
-    List<MavenProject> getDirectUpstreamProjects(MavenProject project);
+    List<MavenProjectPart> getDirectUpstreamProjects(MavenProjectPart projectPart);
 }

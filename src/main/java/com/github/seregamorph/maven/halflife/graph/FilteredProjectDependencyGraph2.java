@@ -30,21 +30,21 @@ class FilteredProjectDependencyGraph2 implements ProjectDependencyGraph2 {
     }
 
     @Override
-    public List<MavenProject> getDirectDownstreamProjects(MavenProject project) {
-        return applyFilter(projectDependencyGraph.getDirectDownstreamProjects(project));
+    public List<MavenProjectPart> getDirectDownstreamProjects(MavenProjectPart projectPart) {
+        return applyFilter(projectDependencyGraph.getDirectDownstreamProjects(projectPart));
     }
 
     @Override
-    public List<MavenProject> getDirectUpstreamProjects(MavenProject project) {
-        return applyFilter(projectDependencyGraph.getDirectUpstreamProjects(project));
+    public List<MavenProjectPart> getDirectUpstreamProjects(MavenProjectPart projectPart) {
+        return applyFilter(projectDependencyGraph.getDirectUpstreamProjects(projectPart));
     }
 
-    private List<MavenProject> applyFilter(Collection<? extends MavenProject> projects) {
-        List<MavenProject> filtered = new ArrayList<>(projects.size());
+    private List<MavenProjectPart> applyFilter(Collection<? extends MavenProjectPart> projects) {
+        List<MavenProjectPart> filtered = new ArrayList<>(projects.size());
 
-        for (MavenProject project : projects) {
-            if (whiteList.containsKey(project)) {
-                filtered.add(project);
+        for (MavenProjectPart projectPart : projects) {
+            if (whiteList.containsKey(projectPart.getProject())) {
+                filtered.add(projectPart);
             }
         }
 
