@@ -46,33 +46,36 @@ public class ConcurrencyDependencyGraph2 {
         return projectBuilds.size();
     }
 
-    public List<MavenProject> getRootSchedulableBuilds() {
-        Set<MavenProject> result = new LinkedHashSet<>();
+    public List<MavenProjectPart> getRootSchedulableBuilds() {
+        Set<MavenProjectPart> result = new LinkedHashSet<>();
         for (ProjectSegment projectBuild : projectBuilds) {
             List<MavenProject> upstreamProjects =
                 projectDependencyGraph.getDirectUpstreamProjects(projectBuild.getProject());
             if (upstreamProjects.isEmpty()) {
-                result.add(projectBuild.getProject());
+                result.add(new MavenProjectPart(projectBuild.getProject()));
             }
         }
         if (result.isEmpty() && !projectBuilds.isEmpty()) {
-            result.add(projectBuilds.get(0).getProject());
+            result.add(new MavenProjectPart(projectBuilds.get(0).getProject()));
         }
         return new ArrayList<>(result);
     }
 
-    public List<MavenProject> markAsFinished(MavenProject mavenProject) {
-        finishedProjects.add(new MavenProjectPart(mavenProject));
-        return getSchedulableNewProcesses(mavenProject);
+    public List<MavenProjectPart> markAsFinished(MavenProjectPart mavenProjectPart) {
+        finishedProjects.add(mavenProjectPart);
+        return getSchedulableNewProcesses(mavenProjectPart);
     }
 
-    private List<MavenProject> getSchedulableNewProcesses(MavenProject finishedProject) {
-        List<MavenProject> result = new ArrayList<>();
-        for (MavenProject dependentProject : projectDependencyGraph.getDirectDownstreamProjects(finishedProject)) {
-            // todo List<ProjectKey>
+    private List<MavenProjectPart> getSchedulableNewProcesses(MavenProjectPart finishedProjectPart) {
+        List<MavenProjectPart> result = new ArrayList<>();
+        for (MavenProject dependentProject : projectDependencyGraph.getDirectDownstreamProjects(finishedProjectPart.getProject())) {
+            // todo List<MavenProjectPart>
             List<MavenProject> upstreamProjects = projectDependencyGraph.getDirectUpstreamProjects(dependentProject);
-            if (finishedProjects.containsAll(upstreamProjects.stream().map(MavenProjectPart::new).collect(Collectors.toList()))) {
-                result.add(dependentProject);
+            List<MavenProjectPart> requiredFinishedProjects = upstreamProjects.stream()
+                .map(MavenProjectPart::new)
+                .collect(Collectors.toList());
+            if (finishedProjects.containsAll(requiredFinishedProjects)) {
+                result.add(new MavenProjectPart(dependentProject));
             }
         }
         return result;

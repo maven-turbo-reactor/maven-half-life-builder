@@ -1,6 +1,7 @@
 package com.github.seregamorph.maven.halflife;
 
 import com.github.seregamorph.maven.halflife.graph.ConcurrencyDependencyGraph2;
+import com.github.seregamorph.maven.halflife.graph.MavenProjectPart;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -75,7 +76,7 @@ public class HalfLifeBuilder implements Builder {
                 return new OrderedFutureTask<>((OrderedCallable<T>) callable);
             }
         };
-        OrderedCompletionService<MavenProject> service = new OrderedCompletionService<>(executor);
+        OrderedCompletionService<MavenProjectPart> service = new OrderedCompletionService<>(executor);
 
         for (TaskSegment taskSegment : taskSegments) {
             ProjectBuildList segmentProjectBuilds = projectBuilds.getByTaskSegment(taskSegment);
@@ -101,14 +102,14 @@ public class HalfLifeBuilder implements Builder {
 
         private final MavenSession rootSession;
         private final ReactorContext reactorContext;
-        private final OrderedCompletionService<MavenProject> service;
+        private final OrderedCompletionService<MavenProjectPart> service;
         private final ConcurrencyDependencyGraph2 analyzer;
         private final TaskSegment taskSegment;
 
         private Scheduler(
             MavenSession rootSession,
             ReactorContext reactorContext,
-            OrderedCompletionService<MavenProject> service,
+            OrderedCompletionService<MavenProjectPart> service,
             ConcurrencyDependencyGraph2 analyzer,
             TaskSegment taskSegment
         ) {
@@ -123,13 +124,13 @@ public class HalfLifeBuilder implements Builder {
             scheduleProjects(analyzer.getRootSchedulableBuilds());
             for (int i = 0; i < analyzer.getNumberOfBuilds(); i++) {
                 try {
-                    MavenProject project = service.take();
+                    MavenProjectPart project = service.take();
                     if (reactorContext.getReactorBuildStatus().isHalted()) {
                         break;
                     }
 
                     if (analyzer.getNumberOfBuilds() > 1) {
-                        List<MavenProject> newItemsThatCanBeBuilt = analyzer.markAsFinished(project);
+                        List<MavenProjectPart> newItemsThatCanBeBuilt = analyzer.markAsFinished(project);
                         scheduleProjects(newItemsThatCanBeBuilt);
                     }
                 } catch (InterruptedException | ExecutionException e) {
@@ -139,13 +140,14 @@ public class HalfLifeBuilder implements Builder {
             }
         }
 
-        private void scheduleProjects(List<MavenProject> projects) {
-            for (MavenProject mavenProject : projects) {
-                logger.debug("Scheduling: {}", mavenProject);
+        private void scheduleProjects(List<MavenProjectPart> projects) {
+            for (MavenProjectPart mavenProjectPart : projects) {
+                logger.debug("Scheduling: {}", mavenProjectPart);
                 service.submit(0, () -> {
                     Thread currentThread = Thread.currentThread();
                     String originalThreadName = currentThread.getName();
 
+                    MavenProject mavenProject = mavenProjectPart.getProject();
                     String threadNameSuffix = mavenProject.getGroupId() + ":" + mavenProject.getArtifactId();
                     currentThread.setName("mvn-builder-" + threadNameSuffix);
                     try {
@@ -157,7 +159,7 @@ public class HalfLifeBuilder implements Builder {
                         currentThread.setName(originalThreadName);
                     }
 
-                    return mavenProject;
+                    return mavenProjectPart;
                 });
             }
         }

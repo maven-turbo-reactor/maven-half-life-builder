@@ -6,12 +6,16 @@ import org.apache.maven.project.MavenProject;
 /**
  * @author Sergey Chernov
  */
-final class MavenProjectPart {
+public final class MavenProjectPart {
 
     private final MavenProject project;
 
     MavenProjectPart(MavenProject project) {
         this.project = project;
+    }
+
+    public MavenProject getProject() {
+        return project;
     }
 
     @Override
@@ -30,11 +34,7 @@ final class MavenProjectPart {
 
     @Override
     public String toString() {
-        return getGav(project);
-    }
-
-    private static String getGav(MavenProject project) {
-        // same as BuilderCommon.getKey()
+        // same as BuilderCommon.getKey() and org.apache.maven.project.ProjectSorter.getId + part
         return project.getGroupId() + ':' + project.getArtifactId() + ':' + project.getVersion();
     }
 }
