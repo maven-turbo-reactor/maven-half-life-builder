@@ -21,12 +21,12 @@ import org.codehaus.plexus.util.dag.CycleDetectedException;
  */
 public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
 
-    private final ProjectSorter sorter;
+    private final ProjectSorter2 sorter;
     private final Map<MavenProject, Integer> order;
     private final Map<String, MavenProject> projects;
 
     public DefaultProjectDependencyGraph2(Collection<MavenProject> projects) throws CycleDetectedException, DuplicateProjectException {
-        this.sorter = new ProjectSorter(projects);
+        this.sorter = new ProjectSorter2(projects);
         List<MavenProject> sorted = this.sorter.getSortedProjects();
         this.order = new HashMap<>(sorted.size());
         this.projects = new HashMap<>(sorted.size());
