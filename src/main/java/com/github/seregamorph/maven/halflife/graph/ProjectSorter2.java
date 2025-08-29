@@ -21,7 +21,7 @@ import org.codehaus.plexus.util.dag.Vertex;
 
 /**
  * @author Sergey Chernov
- *
+ * <p>
  * Based on {@link org.apache.maven.project.ProjectSorter} from maven-core.
  */
 public class ProjectSorter2 {
@@ -39,16 +39,16 @@ public class ProjectSorter2 {
 
         for (MavenProject project : projects) {
             String projectId = getId(project);
+            projectMap.put(projectId, project);
 
-            MavenProject conflictingProject = projectMap.put(projectId, project);
-
-            if (conflictingProject != null) {
-                throw new DuplicateProjectException(
-                        projectId,
-                        conflictingProject.getFile(),
-                        project.getFile(),
-                        "Project '" + projectId + "' is duplicated in the reactor");
-            }
+            // we can skip it as it was already executed in the original projectSorter
+//            if (conflictingProject != null) {
+//                throw new DuplicateProjectException(
+//                    projectId,
+//                    conflictingProject.getFile(),
+//                    project.getFile(),
+//                    "Project '" + projectId + "' is duplicated in the reactor");
+//            }
 
             String projectKey = ArtifactUtils.versionlessKey(project.getGroupId(), project.getArtifactId());
 
@@ -65,15 +65,13 @@ public class ProjectSorter2 {
             for (Dependency dependency : project.getDependencies()) {
                 // modules and libraries
                 addEdge(
-                    projectMap,
-                        vertexMap,
-                        project,
-                        projectVertex,
-                        dependency.getGroupId(),
-                        dependency.getArtifactId(),
-                        dependency.getVersion(),
-                        false,
-                        false);
+                    vertexMap,
+                    projectVertex,
+                    dependency.getGroupId(),
+                    dependency.getArtifactId(),
+                    dependency.getVersion(),
+                    false,
+                    false);
             }
 
             Parent parent = project.getModel().getParent();
@@ -82,42 +80,36 @@ public class ProjectSorter2 {
                 // Parent is added as an edge, but must not cause a cycle - so we remove any other edges it has
                 // in conflict
                 addEdge(
-                    projectMap,
-                        vertexMap,
-                        null,
-                        projectVertex,
-                        parent.getGroupId(),
-                        parent.getArtifactId(),
-                        parent.getVersion(),
-                        true,
-                        false);
+                    vertexMap,
+                    projectVertex,
+                    parent.getGroupId(),
+                    parent.getArtifactId(),
+                    parent.getVersion(),
+                    true,
+                    false);
             }
 
             List<Plugin> buildPlugins = project.getBuildPlugins();
             if (buildPlugins != null) {
                 for (Plugin plugin : buildPlugins) {
                     addEdge(
-                        projectMap,
-                            vertexMap,
-                            project,
-                            projectVertex,
-                            plugin.getGroupId(),
-                            plugin.getArtifactId(),
-                            plugin.getVersion(),
-                            false,
-                            true);
+                        vertexMap,
+                        projectVertex,
+                        plugin.getGroupId(),
+                        plugin.getArtifactId(),
+                        plugin.getVersion(),
+                        false,
+                        true);
 
                     for (Dependency dependency : plugin.getDependencies()) {
                         addEdge(
-                            projectMap,
-                                vertexMap,
-                                project,
-                                projectVertex,
-                                dependency.getGroupId(),
-                                dependency.getArtifactId(),
-                                dependency.getVersion(),
-                                false,
-                                true);
+                            vertexMap,
+                            projectVertex,
+                            dependency.getGroupId(),
+                            dependency.getArtifactId(),
+                            dependency.getVersion(),
+                            false,
+                            true);
                     }
                 }
             }
@@ -126,15 +118,13 @@ public class ProjectSorter2 {
             if (buildExtensions != null) {
                 for (Extension extension : buildExtensions) {
                     addEdge(
-                        projectMap,
-                            vertexMap,
-                            project,
-                            projectVertex,
-                            extension.getGroupId(),
-                            extension.getArtifactId(),
-                            extension.getVersion(),
-                            false,
-                            true);
+                        vertexMap,
+                        projectVertex,
+                        extension.getGroupId(),
+                        extension.getArtifactId(),
+                        extension.getVersion(),
+                        false,
+                        true);
                 }
             }
         }
@@ -149,50 +139,46 @@ public class ProjectSorter2 {
     }
 
     private void addEdge(
-            Map<String, MavenProject> projectMap,
-            Map<String, Map<String, Vertex>> vertexMap,
-            MavenProject project,
-            Vertex projectVertex,
-            String groupId,
-            String artifactId,
-            String version,
-            boolean force,
-            boolean safe)
-            throws CycleDetectedException {
+        Map<String, Map<String, Vertex>> vertexMap,
+        Vertex projectVertex,
+        String groupId,
+        String artifactId,
+        String version,
+        boolean force,
+        boolean safe
+    ) throws CycleDetectedException {
         String projectKey = ArtifactUtils.versionlessKey(groupId, artifactId);
-
         Map<String, Vertex> vertices = vertexMap.get(projectKey);
 
         if (vertices != null) {
             if (isSpecificVersion(version)) {
                 Vertex vertex = vertices.get(version);
                 if (vertex != null) {
-                    addEdge(projectVertex, vertex, project, projectMap, force, safe);
+                    addEdge(projectVertex, vertex, force, safe);
                 }
             } else {
                 for (Vertex vertex : vertices.values()) {
-                    addEdge(projectVertex, vertex, project, projectMap, force, safe);
+                    addEdge(projectVertex, vertex, force, safe);
                 }
             }
         }
     }
 
     private void addEdge(
-            Vertex fromVertex,
-            Vertex toVertex,
-            MavenProject fromProject,
-            Map<String, MavenProject> projectMap,
-            boolean force,
-            boolean safe)
-            throws CycleDetectedException {
+        Vertex fromVertex,
+        Vertex toVertex,
+        boolean force,
+        boolean safe
+    ) throws CycleDetectedException {
         if (fromVertex.equals(toVertex)) {
             return;
         }
 
-        if (fromProject != null) {
-            MavenProject toProject = projectMap.get(toVertex.getLabel());
-            fromProject.addProjectReference(toProject);
-        }
+        // we can skip it as it was already executed in the original projectSorter
+//        if (fromProject != null) {
+//            MavenProject toProject = projectMap.get(toVertex.getLabel());
+//            fromProject.addProjectReference(toProject);
+//        }
 
         if (force && toVertex.getChildren().contains(fromVertex)) {
             dag.removeEdge(toVertex, fromVertex);
@@ -207,7 +193,7 @@ public class ProjectSorter2 {
         }
     }
 
-    private boolean isSpecificVersion(String version) {
+    private static boolean isSpecificVersion(String version) {
         return !(StringUtils.isEmpty(version) || version.startsWith("[") || version.startsWith("("));
     }
 
