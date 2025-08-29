@@ -3,7 +3,7 @@ package com.github.seregamorph.maven.halflife.graph;
 import java.util.List;
 
 /**
- * Based on org.apache.maven.graph.ProjectDependencyGraph from maven-core.
+ * Based on {@link org.apache.maven.execution.ProjectDependencyGraph} from maven-core.
  *
  * @author Sergey Chernov
  */

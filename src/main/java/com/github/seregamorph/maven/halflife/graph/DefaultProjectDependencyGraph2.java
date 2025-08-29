@@ -13,7 +13,7 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 
 /**
- * Based on org.apache.maven.graph.DefaultProjectDependencyGraph from maven-core.
+ * Based on {@link org.apache.maven.graph.DefaultProjectDependencyGraph} from maven-core.
  *
  * @author Sergey Chernov
  */

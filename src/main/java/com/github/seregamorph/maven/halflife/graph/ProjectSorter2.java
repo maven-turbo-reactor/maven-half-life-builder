@@ -21,6 +21,8 @@ import org.codehaus.plexus.util.dag.Vertex;
 
 /**
  * @author Sergey Chernov
+ *
+ * Based on {@link org.apache.maven.project.ProjectSorter} from maven-core.
  */
 public class ProjectSorter2 {
 

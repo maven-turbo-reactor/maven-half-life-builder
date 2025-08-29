@@ -8,7 +8,7 @@ import java.util.Map;
 import org.apache.maven.project.MavenProject;
 
 /**
- * Based on original org.apache.maven.graph.FilteredProjectDependencyGraph from maven-core.
+ * Based on {@link org.apache.maven.graph.FilteredProjectDependencyGraph} from maven-core.
  *
  * @author Sergey Chernov
  */
