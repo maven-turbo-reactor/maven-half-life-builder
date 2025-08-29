@@ -21,18 +21,19 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
 
     private final ProjectSorter2 sorter;
     private final Map<MavenProjectPart, Integer> order;
-    private final Map<String, MavenProjectPart> projects;
+    private final Map<String, MavenProjectPart> projectParts;
 
-    public DefaultProjectDependencyGraph2(Collection<MavenProject> projects) throws CycleDetectedException, DuplicateProjectException {
+    public DefaultProjectDependencyGraph2(
+        Collection<MavenProject> projects
+    ) throws CycleDetectedException, DuplicateProjectException {
         this.sorter = new ProjectSorter2(projects);
-        List<MavenProject> sorted = this.sorter.getSortedProjects();
+        List<MavenProjectPart> sorted = this.sorter.getSortedProjectParts();
         this.order = new HashMap<>(sorted.size());
-        this.projects = new HashMap<>(sorted.size());
+        this.projectParts = new HashMap<>(sorted.size());
         int index = 0;
-        for (MavenProject project : sorted) {
-            MavenProjectPart projectPart = new MavenProjectPart(project);
+        for (MavenProjectPart projectPart : sorted) {
             String id = projectPart.toString();
-            this.projects.put(id, projectPart);
+            this.projectParts.put(id, projectPart);
             this.order.put(projectPart, index++);
         }
     }
@@ -52,7 +53,7 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
     private List<MavenProjectPart> getSortedProjects(Set<String> projectIds) {
         List<MavenProjectPart> result = new ArrayList<>(projectIds.size());
         for (String projectId : projectIds) {
-            result.add(projects.get(projectId));
+            result.add(projectParts.get(projectId));
         }
         result.sort(new MavenProjectComparator());
         return result;
@@ -60,10 +61,11 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
 
     @Override
     public String toString() {
-        return sorter.getSortedProjects().toString();
+        return sorter.getSortedProjectParts().toString();
     }
 
     private class MavenProjectComparator implements Comparator<MavenProjectPart> {
+
         @Override
         public int compare(MavenProjectPart o1, MavenProjectPart o2) {
             return order.get(o1) - order.get(o2);

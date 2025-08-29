@@ -24,12 +24,11 @@ import org.codehaus.plexus.util.dag.Vertex;
  */
 public class ProjectSorter2 {
 
-    private final DAG dag;
-    private final List<MavenProject> sortedProjects;
+    private final DAG dag = new DAG();
+
+    private final List<MavenProjectPart> sortedProjectParts;
 
     public ProjectSorter2(Collection<MavenProject> projects) throws CycleDetectedException, DuplicateProjectException {
-        dag = new DAG();
-
         // groupId:artifactId:version -> project
         Map<String, MavenProject> projectMap = new HashMap<>(projects.size() * 2);
 
@@ -56,11 +55,13 @@ public class ProjectSorter2 {
         }
 
         for (Vertex projectVertex : dag.getVertices()) {
+            // group:artifact:version
             String projectId = projectVertex.getLabel();
 
             MavenProject project = projectMap.get(projectId);
 
             for (Dependency dependency : project.getDependencies()) {
+                // modules and libraries
                 addEdge(
                     projectMap,
                         vertexMap,
@@ -136,12 +137,13 @@ public class ProjectSorter2 {
             }
         }
 
-        List<MavenProject> sortedProjects = new ArrayList<>(projects.size());
+        List<MavenProjectPart> sortedProjects = new ArrayList<>(projects.size());
         List<String> sortedProjectLabels = TopologicalSorter.sort(dag);
         for (String id : sortedProjectLabels) {
-            sortedProjects.add(projectMap.get(id));
+            MavenProject mavenProject = projectMap.get(id);
+            sortedProjects.add(new MavenProjectPart(mavenProject));
         }
-        this.sortedProjects = Collections.unmodifiableList(sortedProjects);
+        this.sortedProjectParts = Collections.unmodifiableList(sortedProjects);
     }
 
     private void addEdge(
@@ -207,8 +209,8 @@ public class ProjectSorter2 {
         return !(StringUtils.isEmpty(version) || version.startsWith("[") || version.startsWith("("));
     }
 
-    List<MavenProject> getSortedProjects() {
-        return sortedProjects;
+    List<MavenProjectPart> getSortedProjectParts() {
+        return sortedProjectParts;
     }
 
     List<String> getDependents(String id) {
