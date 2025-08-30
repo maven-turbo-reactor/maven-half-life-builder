@@ -3,6 +3,7 @@ package com.github.seregamorph.maven.halflife;
 import com.github.seregamorph.maven.halflife.graph.ConcurrencyDependencyGraph2;
 import com.github.seregamorph.maven.halflife.graph.MavenProjectPart;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -51,7 +52,7 @@ public class HalfLifeBuilder implements Builder {
         ProjectBuildList projectBuilds,
         List<TaskSegment> taskSegments,
         ReactorBuildStatus reactorBuildStatus
-    ) throws InterruptedException {
+    ) throws ExecutionException, InterruptedException {
         int nThreads = Math.min(
             session.getRequest().getDegreeOfConcurrency(),
             session.getProjects().size());
@@ -72,10 +73,11 @@ public class HalfLifeBuilder implements Builder {
 
         for (TaskSegment taskSegment : taskSegments) {
             ProjectBuildList segmentProjectBuilds = projectBuilds.getByTaskSegment(taskSegment);
+            Map<MavenProject, ProjectSegment> projectBuildMap = projectBuilds.selectSegment(taskSegment);
             try {
                 ConcurrencyDependencyGraph2 analyzer =
                     new ConcurrencyDependencyGraph2(segmentProjectBuilds, session.getProjectDependencyGraph());
-                new Scheduler(session, reactorContext, service, analyzer, taskSegment)
+                new Scheduler(session, reactorContext, service, analyzer, taskSegment, projectBuildMap)
                     .multiThreadedProjectTaskSegmentBuild();
                 if (reactorContext.getReactorBuildStatus().isHalted()) {
                     break;
@@ -97,19 +99,22 @@ public class HalfLifeBuilder implements Builder {
         private final OrderedCompletionService<MavenProjectPart> service;
         private final ConcurrencyDependencyGraph2 analyzer;
         private final TaskSegment taskSegment;
+        private final Map<MavenProject, ProjectSegment> projectBuildMap;
 
         private Scheduler(
             MavenSession rootSession,
             ReactorContext reactorContext,
             OrderedCompletionService<MavenProjectPart> service,
             ConcurrencyDependencyGraph2 analyzer,
-            TaskSegment taskSegment
+            TaskSegment taskSegment,
+            Map<MavenProject, ProjectSegment> projectBuildMap
         ) {
             this.rootSession = rootSession;
             this.reactorContext = reactorContext;
             this.service = service;
             this.analyzer = analyzer;
             this.taskSegment = taskSegment;
+            this.projectBuildMap = projectBuildMap;
         }
 
         private void multiThreadedProjectTaskSegmentBuild() {
@@ -134,19 +139,22 @@ public class HalfLifeBuilder implements Builder {
 
         private void scheduleProjects(List<MavenProjectPart> projects) {
             for (MavenProjectPart mavenProjectPart : projects) {
-                logger.debug("Scheduling: {}", mavenProjectPart);
+                MavenProject mavenProject = mavenProjectPart.getProject();
+                ProjectSegment projectSegment = projectBuildMap.get(mavenProject);
+                logger.debug("Scheduling: {}", projectSegment);
                 service.submit(0, () -> {
                     Thread currentThread = Thread.currentThread();
                     String originalThreadName = currentThread.getName();
+                    MavenProject project = projectSegment.getProject();
 
-                    MavenProject mavenProject = mavenProjectPart.getProject();
                     String threadNameSuffix = mavenProject.getGroupId() + ":" + mavenProject.getArtifactId();
                     currentThread.setName("mvn-builder-" + threadNameSuffix);
                     try {
-                        // Implementation notice: in the original code the lifecycleModuleBuilder.buildProject
-                        // received projectSegment.getSession() and rootSession, which are equal since
-                        // Maven 3.9 (because MavenSession uses ThreadLocal), but are different in Maven 3.8
-                        lifecycleModuleBuilder.buildProject(rootSession, reactorContext, mavenProject, taskSegment);
+                        // Implementation notice:
+                        // Before Maven 3.9 projectSegment.getSession() != rootSession
+                        // Since  Maven 3.9 projectSegment.getSession() == rootSession (based on ThreadLocal)
+                        lifecycleModuleBuilder.buildProject(
+                            projectSegment.getSession(), rootSession, reactorContext, project, taskSegment);
                     } finally {
                         currentThread.setName(originalThreadName);
                     }
