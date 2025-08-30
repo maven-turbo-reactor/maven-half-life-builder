@@ -11,7 +11,6 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Extension;
 import org.apache.maven.model.Parent;
 import org.apache.maven.model.Plugin;
-import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
@@ -30,7 +29,7 @@ public class ProjectSorter2 {
 
     private final List<MavenProjectPart> sortedProjectParts;
 
-    public ProjectSorter2(Collection<MavenProject> projects) throws CycleDetectedException, DuplicateProjectException {
+    public ProjectSorter2(Collection<MavenProject> projects) throws CycleDetectedException {
         // groupId:artifactId:version -> project
         Map<String, MavenProject> projectMap = new HashMap<>(projects.size() * 2);
 

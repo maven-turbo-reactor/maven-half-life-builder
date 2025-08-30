@@ -9,10 +9,6 @@ final class TestUtils {
     static final String GROUP_ID = "groupId";
     static final String VERSION = "1.0-SNAPSHOT";
 
-    static String id(MavenProject parent) {
-        return new MavenProjectPart(parent).toString();
-    }
-
     static MavenProject project(String artifactId) {
         var project = new MavenProject();
         project.setGroupId(GROUP_ID);

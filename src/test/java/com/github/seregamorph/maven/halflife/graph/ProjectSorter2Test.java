@@ -1,6 +1,5 @@
 package com.github.seregamorph.maven.halflife.graph;
 
-import static com.github.seregamorph.maven.halflife.graph.TestUtils.id;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.jacksonCoreCompileDependency;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.junitJupiterTestDependency;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.moduleDependency;
@@ -9,14 +8,14 @@ import static com.github.seregamorph.maven.halflife.graph.TestUtils.project;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
-import org.apache.maven.project.DuplicateProjectException;
+import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 import org.junit.jupiter.api.Test;
 
 class ProjectSorter2Test {
 
     @Test
-    public void shouldSort() throws CycleDetectedException, DuplicateProjectException {
+    public void shouldSort() throws CycleDetectedException {
         var parent = project("parent");
         var app = project("app");
         var core = project("core");
@@ -71,5 +70,9 @@ class ProjectSorter2Test {
             "groupId:parent:1.0-SNAPSHOT"
         ), projectSorter.getDependencies(id(app)));
         assertEquals(List.of(), projectSorter.getDependents(id(app)));
+    }
+
+    private static String id(MavenProject parent) {
+        return new MavenProjectPart(parent).toString();
     }
 }
