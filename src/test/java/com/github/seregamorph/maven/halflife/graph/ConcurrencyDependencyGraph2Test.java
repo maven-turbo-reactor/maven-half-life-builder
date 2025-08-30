@@ -1,5 +1,7 @@
 package com.github.seregamorph.maven.halflife.graph;
 
+import static com.github.seregamorph.maven.halflife.graph.ProjectPart.MAIN;
+import static com.github.seregamorph.maven.halflife.graph.ProjectPart.TEST;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.jacksonCoreCompileDependency;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.junitJupiterTestDependency;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.moduleDependency;
@@ -41,19 +43,31 @@ class ConcurrencyDependencyGraph2Test {
             projects);
         var analyzer = new ConcurrencyDependencyGraph2(projects, filteredProjectDependencyGraph);
 
-        assertEquals(4, analyzer.getNumberOfBuilds());
+        assertEquals(8, analyzer.getNumberOfBuilds());
 
         assertEquals(List.of(
-            new MavenProjectPart(parent)
+            new MavenProjectPart(parent, MAIN)
         ), analyzer.getRootSchedulableBuilds());
+
         assertEquals(List.of(
-            new MavenProjectPart(testUtils)
-        ), analyzer.markAsFinished(new MavenProjectPart(parent)));
+            new MavenProjectPart(parent, TEST),
+            new MavenProjectPart(core, MAIN),
+            new MavenProjectPart(testUtils, MAIN)
+        ), analyzer.markAsFinished(new MavenProjectPart(parent, MAIN)));
         assertEquals(List.of(
-            new MavenProjectPart(core)
-        ), analyzer.markAsFinished(new MavenProjectPart(testUtils)));
+            new MavenProjectPart(app, MAIN)
+        ), analyzer.markAsFinished(new MavenProjectPart(core, MAIN)));
         assertEquals(List.of(
-            new MavenProjectPart(app)
-        ), analyzer.markAsFinished(new MavenProjectPart(core)));
+            new MavenProjectPart(app, TEST)
+        ), analyzer.markAsFinished(new MavenProjectPart(app, MAIN)));
+        assertEquals(List.of(
+        ), analyzer.markAsFinished(new MavenProjectPart(app, TEST)));
+        assertEquals(List.of(
+            new MavenProjectPart(core, TEST),
+            new MavenProjectPart(testUtils, TEST)
+        ), analyzer.markAsFinished(new MavenProjectPart(testUtils, MAIN)));
+        assertEquals(List.of(), analyzer.markAsFinished(new MavenProjectPart(core, TEST)));
+        assertEquals(List.of(), analyzer.markAsFinished(new MavenProjectPart(parent, TEST)));
+        assertEquals(List.of(), analyzer.markAsFinished(new MavenProjectPart(testUtils, TEST)));
     }
 }

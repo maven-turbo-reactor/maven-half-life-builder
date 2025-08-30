@@ -55,22 +55,20 @@ public class ConcurrencyDependencyGraph2 {
     }
 
     public int getNumberOfBuilds() {
-        return projectsToBuild.size();
+        return projectsToBuild.size() * 2;
     }
 
     public List<MavenProjectPart> getRootSchedulableBuilds() {
         Set<MavenProjectPart> result = new LinkedHashSet<>();
         for (MavenProject project : projectsToBuild) {
-            // todo ProjectPart.MAIN
-            MavenProjectPart mainProjectPart = new MavenProjectPart(project);
+            MavenProjectPart mainProjectPart = new MavenProjectPart(project, ProjectPart.MAIN);
             List<MavenProjectPart> upstreamProjects = projectDependencyGraph.getDirectUpstreamProjects(mainProjectPart);
             if (upstreamProjects.isEmpty()) {
                 result.add(mainProjectPart);
             }
         }
         if (result.isEmpty() && !projectsToBuild.isEmpty()) {
-            // todo ProjectPart.MAIN
-            result.add(new MavenProjectPart(projectsToBuild.get(0)));
+            result.add(new MavenProjectPart(projectsToBuild.get(0), ProjectPart.MAIN));
         }
         return new ArrayList<>(result);
     }

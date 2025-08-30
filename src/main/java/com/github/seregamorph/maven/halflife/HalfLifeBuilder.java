@@ -2,6 +2,7 @@ package com.github.seregamorph.maven.halflife;
 
 import com.github.seregamorph.maven.halflife.graph.ConcurrencyDependencyGraph2;
 import com.github.seregamorph.maven.halflife.graph.MavenProjectPart;
+import com.github.seregamorph.maven.halflife.graph.ProjectPart;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -52,7 +53,7 @@ public class HalfLifeBuilder implements Builder {
         ProjectBuildList projectBuilds,
         List<TaskSegment> taskSegments,
         ReactorBuildStatus reactorBuildStatus
-    ) throws ExecutionException, InterruptedException {
+    ) throws InterruptedException {
         int nThreads = Math.min(
             session.getRequest().getDegreeOfConcurrency(),
             session.getProjects().size());
@@ -61,6 +62,7 @@ public class HalfLifeBuilder implements Builder {
         for (ProjectSegment segment : projectBuilds) {
             segment.getSession().setParallel(parallel);
         }
+        logger.warn("Using Half-Life ☢️ builder with {} threads", nThreads);
         // executor supporting task ordering, prioritize building modules that have more downstream dependencies
         ExecutorService executor = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
             new PriorityBlockingQueue<>(), new BuildThreadFactory()) {
@@ -122,13 +124,13 @@ public class HalfLifeBuilder implements Builder {
             scheduleProjects(analyzer.getRootSchedulableBuilds());
             for (int i = 0; i < analyzer.getNumberOfBuilds(); i++) {
                 try {
-                    MavenProjectPart project = service.take();
+                    MavenProjectPart projectPart = service.take();
                     if (reactorContext.getReactorBuildStatus().isHalted()) {
                         break;
                     }
 
                     if (analyzer.getNumberOfBuilds() > 1) {
-                        List<MavenProjectPart> newItemsThatCanBeBuilt = analyzer.markAsFinished(project);
+                        List<MavenProjectPart> newItemsThatCanBeBuilt = analyzer.markAsFinished(projectPart);
                         scheduleProjects(newItemsThatCanBeBuilt);
                     }
                 } catch (InterruptedException | ExecutionException e) {
@@ -143,7 +145,8 @@ public class HalfLifeBuilder implements Builder {
                 MavenProject mavenProject = mavenProjectPart.getProject();
                 ProjectSegment projectSegment = projectBuildMap.get(mavenProject);
                 logger.debug("Scheduling: {}", projectSegment);
-                service.submit(0, () -> {
+                int order = mavenProjectPart.getPart() == ProjectPart.MAIN ? 0 : 1;
+                service.submit(order, () -> {
                     Thread currentThread = Thread.currentThread();
                     String originalThreadName = currentThread.getName();
                     MavenProject project = projectSegment.getProject();
@@ -154,8 +157,9 @@ public class HalfLifeBuilder implements Builder {
                         // Implementation notice:
                         // Before Maven 3.9 projectSegment.getSession() != rootSession
                         // Since  Maven 3.9 projectSegment.getSession() == rootSession (based on ThreadLocal)
-                        lifecycleModuleBuilder.buildProject(
-                            projectSegment.getSession(), rootSession, reactorContext, project, taskSegment);
+                        CurrentProjectExecution.doWithCurrentProject(mavenProjectPart.getPart(), () ->
+                            lifecycleModuleBuilder.buildProject(projectSegment.getSession(), rootSession,
+                                reactorContext, project, taskSegment));
                     } finally {
                         currentThread.setName(originalThreadName);
                     }

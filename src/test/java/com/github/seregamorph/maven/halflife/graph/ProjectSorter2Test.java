@@ -1,5 +1,7 @@
 package com.github.seregamorph.maven.halflife.graph;
 
+import static com.github.seregamorph.maven.halflife.graph.ProjectPart.MAIN;
+import static com.github.seregamorph.maven.halflife.graph.ProjectPart.TEST;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.jacksonCoreCompileDependency;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.junitJupiterTestDependency;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.moduleDependency;
@@ -37,42 +39,73 @@ class ProjectSorter2Test {
 
         var projectSorter = new ProjectSorter2(List.of(app, core, parent, testUtils));
         assertEquals(List.of(
-            new MavenProjectPart(parent),
-            new MavenProjectPart(testUtils),
-            new MavenProjectPart(core),
-            new MavenProjectPart(app)
+            new MavenProjectPart(parent, MAIN),
+            new MavenProjectPart(core, MAIN),
+            new MavenProjectPart(app, MAIN),
+            new MavenProjectPart(app, TEST),
+            new MavenProjectPart(testUtils, MAIN),
+            new MavenProjectPart(core, TEST),
+            new MavenProjectPart(parent, TEST),
+            new MavenProjectPart(testUtils, TEST)
         ), projectSorter.getSortedProjectParts());
 
-        assertEquals(List.of(), projectSorter.getDependencies(id(parent)));
+        assertEquals(List.of(), projectSorter.getDependencies(id(parent, MAIN)));
         assertEquals(List.of(
-            "groupId:app:1.0-SNAPSHOT",
-            "groupId:core:1.0-SNAPSHOT",
-            "groupId:test-utils:1.0-SNAPSHOT"
-        ), projectSorter.getDependents(id(parent)));
+            "groupId:parent:1.0-SNAPSHOT(main)"
+        ), projectSorter.getDependencies(id(parent, TEST)));
+        assertEquals(List.of(
+            "groupId:parent:1.0-SNAPSHOT(test)",
+            "groupId:app:1.0-SNAPSHOT(main)",
+            "groupId:app:1.0-SNAPSHOT(test)",
+            "groupId:core:1.0-SNAPSHOT(main)",
+            "groupId:core:1.0-SNAPSHOT(test)",
+            "groupId:test-utils:1.0-SNAPSHOT(main)",
+            "groupId:test-utils:1.0-SNAPSHOT(test)"
+        ), projectSorter.getDependents(id(parent, MAIN)));
+        assertEquals(List.of(), projectSorter.getDependents(id(parent, TEST)));
 
         assertEquals(List.of(
-            "groupId:parent:1.0-SNAPSHOT"
-        ), projectSorter.getDependencies(id(testUtils)));
+            "groupId:parent:1.0-SNAPSHOT(main)"
+        ), projectSorter.getDependencies(id(testUtils, MAIN)));
         assertEquals(List.of(
-            "groupId:core:1.0-SNAPSHOT"
-        ), projectSorter.getDependents(id(testUtils)));
+            "groupId:test-utils:1.0-SNAPSHOT(main)",
+            "groupId:parent:1.0-SNAPSHOT(main)"
+        ), projectSorter.getDependencies(id(testUtils, TEST)));
+        assertEquals(List.of(
+            "groupId:test-utils:1.0-SNAPSHOT(test)",
+            "groupId:core:1.0-SNAPSHOT(test)"
+        ), projectSorter.getDependents(id(testUtils, MAIN)));
+        assertEquals(List.of(), projectSorter.getDependents(id(testUtils, TEST)));
 
         assertEquals(List.of(
-            "groupId:test-utils:1.0-SNAPSHOT",
-            "groupId:parent:1.0-SNAPSHOT"
-        ), projectSorter.getDependencies(id(core)));
+            "groupId:parent:1.0-SNAPSHOT(main)"
+        ), projectSorter.getDependencies(id(core, MAIN)));
         assertEquals(List.of(
-            "groupId:app:1.0-SNAPSHOT"
-        ), projectSorter.getDependents(id(core)));
+            "groupId:core:1.0-SNAPSHOT(main)",
+            "groupId:test-utils:1.0-SNAPSHOT(main)",
+            "groupId:parent:1.0-SNAPSHOT(main)"
+        ), projectSorter.getDependencies(id(core, TEST)));
+        assertEquals(List.of(
+            "groupId:core:1.0-SNAPSHOT(test)",
+            "groupId:app:1.0-SNAPSHOT(main)"
+        ), projectSorter.getDependents(id(core, MAIN)));
+        assertEquals(List.of(), projectSorter.getDependents(id(core, TEST)));
 
         assertEquals(List.of(
-            "groupId:core:1.0-SNAPSHOT",
-            "groupId:parent:1.0-SNAPSHOT"
-        ), projectSorter.getDependencies(id(app)));
-        assertEquals(List.of(), projectSorter.getDependents(id(app)));
+            "groupId:core:1.0-SNAPSHOT(main)",
+            "groupId:parent:1.0-SNAPSHOT(main)"
+        ), projectSorter.getDependencies(id(app, MAIN)));
+        assertEquals(List.of(
+            "groupId:app:1.0-SNAPSHOT(main)",
+            "groupId:parent:1.0-SNAPSHOT(main)"
+        ), projectSorter.getDependencies(id(app, TEST)));
+        assertEquals(List.of(
+            "groupId:app:1.0-SNAPSHOT(test)"
+        ), projectSorter.getDependents(id(app, MAIN)));
+        assertEquals(List.of(), projectSorter.getDependents(id(app, TEST)));
     }
 
-    private static String id(MavenProject parent) {
-        return new MavenProjectPart(parent).toString();
+    private static String id(MavenProject parent, ProjectPart part) {
+        return new MavenProjectPart(parent, part).toString();
     }
 }

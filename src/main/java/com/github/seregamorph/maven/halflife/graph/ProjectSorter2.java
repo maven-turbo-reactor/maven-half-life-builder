@@ -30,15 +30,17 @@ public class ProjectSorter2 {
     private final List<MavenProjectPart> sortedProjectParts;
 
     public ProjectSorter2(Collection<MavenProject> projects) throws CycleDetectedException {
-        // groupId:artifactId:version -> project
-        Map<String, MavenProject> projectMap = new HashMap<>(projects.size() * 2);
+        // groupId:artifactId:version(part) -> project
+        Map<String, MavenProjectPart> projectPartMap = new HashMap<>(projects.size() * 2);
 
-        // groupId:artifactId -> (version -> vertex)
-        Map<String, Map<String, Vertex>> vertexMap = new HashMap<>(projects.size() * 2);
+        // groupId:artifactId -> (version -> (part -> vertex))
+        Map<String, Map<String, Map<ProjectPart, Vertex>>> vertexMap = new HashMap<>(projects.size() * 2);
 
         for (MavenProject project : projects) {
-            String projectId = getId(project);
-            projectMap.put(projectId, project);
+            MavenProjectPart mainProjectPart = new MavenProjectPart(project, ProjectPart.MAIN);
+            MavenProjectPart testProjectPart = new MavenProjectPart(project, ProjectPart.TEST);
+            projectPartMap.put(mainProjectPart.toString(), mainProjectPart);
+            projectPartMap.put(testProjectPart.toString(), testProjectPart);
 
             // we can skip it as it was already executed in the original projectSorter
 //            if (conflictingProject != null) {
@@ -49,28 +51,36 @@ public class ProjectSorter2 {
 //                    "Project '" + projectId + "' is duplicated in the reactor");
 //            }
 
-            String projectKey = ArtifactUtils.versionlessKey(project.getGroupId(), project.getArtifactId());
+            Vertex mainProjectVertex = dag.addVertex(mainProjectPart.toString());
+            Vertex testProjectVertex = dag.addVertex(testProjectPart.toString());
+            dag.addEdge(testProjectVertex, mainProjectVertex);
 
-            Map<String, Vertex> vertices = vertexMap.computeIfAbsent(projectKey, k -> new HashMap<>(2, 1));
-            vertices.put(project.getVersion(), dag.addVertex(projectId));
+            String projectKey = ArtifactUtils.versionlessKey(project.getGroupId(), project.getArtifactId());
+            Map<ProjectPart, Vertex> vertices = vertexMap.computeIfAbsent(projectKey, k -> new HashMap<>(2, 1))
+                .computeIfAbsent(project.getVersion(), k -> new HashMap<>(2, 1));
+            vertices.put(ProjectPart.MAIN, mainProjectVertex);
+            vertices.put(ProjectPart.TEST, testProjectVertex);
         }
 
-        for (Vertex projectVertex : dag.getVertices()) {
-            // group:artifact:version
-            String projectId = projectVertex.getLabel();
+        for (Vertex projectPartVertex : dag.getVertices()) {
+            // group:artifact:version(part)
+            String projectPartId = projectPartVertex.getLabel();
 
-            MavenProject project = projectMap.get(projectId);
+            MavenProjectPart projectPart = projectPartMap.get(projectPartId);
+            MavenProject project = projectPart.getProject();
 
             for (Dependency dependency : project.getDependencies()) {
                 // modules and libraries
-                addEdge(
-                    vertexMap,
-                    projectVertex,
-                    dependency.getGroupId(),
-                    dependency.getArtifactId(),
-                    dependency.getVersion(),
-                    false,
-                    false);
+                if (isAddDependency(projectPart.getPart(), dependency.getScope())) {
+                    addEdge(
+                        vertexMap,
+                        projectPartVertex,
+                        dependency.getGroupId(),
+                        dependency.getArtifactId(),
+                        dependency.getVersion(),
+                        false,
+                        false);
+                }
             }
 
             Parent parent = project.getModel().getParent();
@@ -80,7 +90,7 @@ public class ProjectSorter2 {
                 // in conflict
                 addEdge(
                     vertexMap,
-                    projectVertex,
+                    projectPartVertex,
                     parent.getGroupId(),
                     parent.getArtifactId(),
                     parent.getVersion(),
@@ -93,7 +103,7 @@ public class ProjectSorter2 {
                 for (Plugin plugin : buildPlugins) {
                     addEdge(
                         vertexMap,
-                        projectVertex,
+                        projectPartVertex,
                         plugin.getGroupId(),
                         plugin.getArtifactId(),
                         plugin.getVersion(),
@@ -103,7 +113,7 @@ public class ProjectSorter2 {
                     for (Dependency dependency : plugin.getDependencies()) {
                         addEdge(
                             vertexMap,
-                            projectVertex,
+                            projectPartVertex,
                             dependency.getGroupId(),
                             dependency.getArtifactId(),
                             dependency.getVersion(),
@@ -118,7 +128,7 @@ public class ProjectSorter2 {
                 for (Extension extension : buildExtensions) {
                     addEdge(
                         vertexMap,
-                        projectVertex,
+                        projectPartVertex,
                         extension.getGroupId(),
                         extension.getArtifactId(),
                         extension.getVersion(),
@@ -129,17 +139,25 @@ public class ProjectSorter2 {
         }
 
         List<MavenProjectPart> sortedProjects = new ArrayList<>(projects.size());
-        List<String> sortedProjectLabels = TopologicalSorter.sort(dag);
-        for (String id : sortedProjectLabels) {
-            MavenProject mavenProject = projectMap.get(id);
-            sortedProjects.add(new MavenProjectPart(mavenProject));
+        List<String> sortedProjectPartLabels = TopologicalSorter.sort(dag);
+        for (String id : sortedProjectPartLabels) {
+            MavenProjectPart mavenProjectPart = projectPartMap.get(id);
+            sortedProjects.add(mavenProjectPart);
         }
         this.sortedProjectParts = Collections.unmodifiableList(sortedProjects);
     }
 
+    private static boolean isAddDependency(ProjectPart part, String scope) {
+        if (part == ProjectPart.MAIN) {
+            return !"test".equals(scope);
+        } else {
+            return "test".equals(scope);
+        }
+    }
+
     private void addEdge(
-        Map<String, Map<String, Vertex>> vertexMap,
-        Vertex projectVertex,
+        Map<String, Map<String, Map<ProjectPart, Vertex>>> vertexMap,
+        Vertex projectPartVertex,
         String groupId,
         String artifactId,
         String version,
@@ -147,17 +165,23 @@ public class ProjectSorter2 {
         boolean safe
     ) throws CycleDetectedException {
         String projectKey = ArtifactUtils.versionlessKey(groupId, artifactId);
-        Map<String, Vertex> vertices = vertexMap.get(projectKey);
+        // version -> (part -> vertex)
+        Map<String, Map<ProjectPart, Vertex>> vertices = vertexMap.get(projectKey);
 
         if (vertices != null) {
             if (isSpecificVersion(version)) {
-                Vertex vertex = vertices.get(version);
+                Map<ProjectPart, Vertex> partVertices = vertices.get(version);
+                // todo support ProjectPart.TEST for test-jar
+                Vertex vertex = partVertices == null ? null : partVertices.get(ProjectPart.MAIN);
                 if (vertex != null) {
-                    addEdge(projectVertex, vertex, force, safe);
+                    addEdge(projectPartVertex, vertex, force, safe);
                 }
             } else {
-                for (Vertex vertex : vertices.values()) {
-                    addEdge(projectVertex, vertex, force, safe);
+                for (Map<ProjectPart, Vertex> partVertices : vertices.values()) {
+                    Vertex vertex = partVertices.get(ProjectPart.MAIN);
+                    if (vertex != null) {
+                        addEdge(projectPartVertex, vertex, force, safe);
+                    }
                 }
             }
         }
@@ -206,10 +230,5 @@ public class ProjectSorter2 {
 
     List<String> getDependencies(String id) {
         return dag.getChildLabels(id);
-    }
-
-    private static String getId(MavenProject project) {
-        // todo MavenProjectPart.toString
-        return ArtifactUtils.key(project.getGroupId(), project.getArtifactId(), project.getVersion());
     }
 }

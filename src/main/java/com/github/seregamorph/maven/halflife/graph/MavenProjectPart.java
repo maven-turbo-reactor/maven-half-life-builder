@@ -9,13 +9,19 @@ import org.apache.maven.project.MavenProject;
 public final class MavenProjectPart {
 
     private final MavenProject project;
+    private final ProjectPart part;
 
-    MavenProjectPart(MavenProject project) {
+    MavenProjectPart(MavenProject project, ProjectPart part) {
         this.project = Objects.requireNonNull(project, "project");
+        this.part = part;
     }
 
     public MavenProject getProject() {
         return project;
+    }
+
+    public ProjectPart getPart() {
+        return part;
     }
 
     @Override
@@ -24,17 +30,19 @@ public final class MavenProjectPart {
             return false;
         }
         MavenProjectPart that = (MavenProjectPart) o;
-        return project == that.project;
+        return project == that.project
+            && part == that.part;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(project);
+        return Objects.hash(project, part);
     }
 
     @Override
     public String toString() {
         // same as BuilderCommon.getKey() and org.apache.maven.project.ProjectSorter.getId + part
-        return project.getGroupId() + ':' + project.getArtifactId() + ':' + project.getVersion();
+        return project.getGroupId() + ':' + project.getArtifactId() + ':' + project.getVersion()
+            + "(" + part + ")";
     }
 }
