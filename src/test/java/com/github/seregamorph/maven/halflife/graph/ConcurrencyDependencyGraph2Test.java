@@ -1,6 +1,5 @@
 package com.github.seregamorph.maven.halflife.graph;
 
-import static com.github.seregamorph.maven.halflife.graph.TestUtils.id;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.jacksonCoreCompileDependency;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.junitJupiterTestDependency;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.moduleDependency;
@@ -13,7 +12,7 @@ import org.apache.maven.project.DuplicateProjectException;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 import org.junit.jupiter.api.Test;
 
-class ProjectSorter2Test {
+class ConcurrencyDependencyGraph2Test {
 
     @Test
     public void shouldSort() throws CycleDetectedException, DuplicateProjectException {
@@ -36,40 +35,25 @@ class ProjectSorter2Test {
             junitJupiterTestDependency()
         ));
 
-        var projectSorter = new ProjectSorter2(List.of(app, core, parent, testUtils));
+        var projects = List.of(parent, app, core, testUtils);
+        var defaultProjectDependencyGraph = new DefaultProjectDependencyGraph2(projects);
+        var filteredProjectDependencyGraph = new FilteredProjectDependencyGraph2(defaultProjectDependencyGraph,
+            projects);
+        var analyzer = new ConcurrencyDependencyGraph2(projects, filteredProjectDependencyGraph);
+
+        assertEquals(4, analyzer.getNumberOfBuilds());
+
         assertEquals(List.of(
-            new MavenProjectPart(parent),
-            new MavenProjectPart(testUtils),
-            new MavenProjectPart(core),
+            new MavenProjectPart(parent)
+        ), analyzer.getRootSchedulableBuilds());
+        assertEquals(List.of(
+            new MavenProjectPart(testUtils)
+        ), analyzer.markAsFinished(new MavenProjectPart(parent)));
+        assertEquals(List.of(
+            new MavenProjectPart(core)
+        ), analyzer.markAsFinished(new MavenProjectPart(testUtils)));
+        assertEquals(List.of(
             new MavenProjectPart(app)
-        ), projectSorter.getSortedProjectParts());
-
-        assertEquals(List.of(), projectSorter.getDependencies(id(parent)));
-        assertEquals(List.of(
-            "groupId:app:1.0-SNAPSHOT",
-            "groupId:core:1.0-SNAPSHOT",
-            "groupId:test-utils:1.0-SNAPSHOT"
-        ), projectSorter.getDependents(id(parent)));
-
-        assertEquals(List.of(
-            "groupId:parent:1.0-SNAPSHOT"
-        ), projectSorter.getDependencies(id(testUtils)));
-        assertEquals(List.of(
-            "groupId:core:1.0-SNAPSHOT"
-        ), projectSorter.getDependents(id(testUtils)));
-
-        assertEquals(List.of(
-            "groupId:test-utils:1.0-SNAPSHOT",
-            "groupId:parent:1.0-SNAPSHOT"
-        ), projectSorter.getDependencies(id(core)));
-        assertEquals(List.of(
-            "groupId:app:1.0-SNAPSHOT"
-        ), projectSorter.getDependents(id(core)));
-
-        assertEquals(List.of(
-            "groupId:core:1.0-SNAPSHOT",
-            "groupId:parent:1.0-SNAPSHOT"
-        ), projectSorter.getDependencies(id(app)));
-        assertEquals(List.of(), projectSorter.getDependents(id(app)));
+        ), analyzer.markAsFinished(new MavenProjectPart(core)));
     }
 }
