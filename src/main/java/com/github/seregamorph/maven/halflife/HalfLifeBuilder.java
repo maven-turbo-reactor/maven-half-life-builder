@@ -90,6 +90,7 @@ public class HalfLifeBuilder implements Builder {
 
         executor.shutdown();
         executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        // todo update reactorContext.getResult() buildSummary (append MAIN and TEST)
     }
 
     private class Scheduler {
