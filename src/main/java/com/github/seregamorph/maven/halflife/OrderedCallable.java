@@ -7,17 +7,17 @@ import java.util.concurrent.Callable;
  */
 public class OrderedCallable<T> implements Callable<T>, Comparable<OrderedCallable<T>> {
 
-    private final int order;
+    private final OrderKey orderKey;
     private final Callable<T> delegate;
 
-    public OrderedCallable(int order, Callable<T> delegate) {
-        this.order = order;
+    public OrderedCallable(OrderKey orderKey, Callable<T> delegate) {
+        this.orderKey = orderKey;
         this.delegate = delegate;
     }
 
     @Override
-    public int compareTo(OrderedCallable that) {
-        return Integer.compare(order, that.order);
+    public int compareTo(OrderedCallable<T> that) {
+        return this.orderKey.compareTo(that.orderKey);
     }
 
     @Override

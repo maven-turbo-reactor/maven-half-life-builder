@@ -2,7 +2,6 @@ package com.github.seregamorph.maven.halflife;
 
 import com.github.seregamorph.maven.halflife.graph.ConcurrencyDependencyGraph2;
 import com.github.seregamorph.maven.halflife.graph.MavenProjectPart;
-import com.github.seregamorph.maven.halflife.graph.ProjectPart;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -25,6 +24,7 @@ import org.apache.maven.lifecycle.internal.ReactorContext;
 import org.apache.maven.lifecycle.internal.TaskSegment;
 import org.apache.maven.lifecycle.internal.builder.Builder;
 import org.apache.maven.project.MavenProject;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,8 +145,9 @@ public class HalfLifeBuilder implements Builder {
                 MavenProject mavenProject = mavenProjectPart.getProject();
                 ProjectSegment projectSegment = projectBuildMap.get(mavenProject);
                 logger.debug("Scheduling: {}", projectSegment);
-                int order = mavenProjectPart.getPart() == ProjectPart.MAIN ? 0 : 1;
-                service.submit(order, () -> {
+                Integer order = getOrder(mavenProject);
+                OrderKey orderKey = new OrderKey(mavenProjectPart.getPart(), order);
+                service.submit(orderKey, () -> {
                     Thread currentThread = Thread.currentThread();
                     String originalThreadName = currentThread.getName();
                     MavenProject project = projectSegment.getProject();
@@ -168,5 +169,11 @@ public class HalfLifeBuilder implements Builder {
                 });
             }
         }
+    }
+
+    // todo
+    @Nullable
+    private Integer getOrder(MavenProject project) {
+        return "architecture-testing".equals(project.getArtifactId()) ? 0 : null;
     }
 }
