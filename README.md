@@ -14,6 +14,7 @@ let's call them "main" and "test".
 verify and install
 
 The build phases of the module are separated like this (some intermediate phases are ommitted to simplify explanation):
+
 <img src="doc/phases_rearrange.png" alt="Phases" width="700"/>
 
 <img src="doc/build_graph_granular.png" alt="New build graph" width="700"/>
