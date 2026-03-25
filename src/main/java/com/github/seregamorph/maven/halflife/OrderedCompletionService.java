@@ -21,9 +21,9 @@ class OrderedCompletionService<T> {
         this.completionQueue = new LinkedBlockingQueue<>();
     }
 
-    Future<T> submit(int order, Callable<T> buildCallable) {
+    Future<T> submit(int primaryOrder, int secondaryOrder, Callable<T> buildCallable) {
         Objects.requireNonNull(buildCallable);
-        return executor.submit(new OrderedCallable<>(order, () -> {
+        return executor.submit(new OrderedCallable<>(primaryOrder, secondaryOrder, () -> {
             try {
                 T result = buildCallable.call();
                 completionQueue.add(Try.success(result));

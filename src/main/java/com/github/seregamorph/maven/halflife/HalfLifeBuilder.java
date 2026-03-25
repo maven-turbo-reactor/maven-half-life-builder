@@ -145,8 +145,22 @@ public class HalfLifeBuilder implements Builder {
                 MavenProject mavenProject = mavenProjectPart.getProject();
                 ProjectSegment projectSegment = projectBuildMap.get(mavenProject);
                 logger.debug("Scheduling: {}", projectSegment);
-                int order = mavenProjectPart.getPart() == ProjectPart.MAIN ? 0 : 1;
-                service.submit(order, () -> {
+                int primaryOrder;
+                int secondaryOrder;
+                if (mavenProjectPart.getPart() == ProjectPart.MAIN) {
+                    primaryOrder = 0;
+                    List<MavenProject> downstreamDependencies = rootSession.getProjectDependencyGraph()
+                        .getDownstreamProjects(mavenProject, false);
+                    // negate size for descending order
+                    secondaryOrder = -downstreamDependencies.size();
+                } else {
+                    primaryOrder = 1;
+                    List<MavenProject> upstreamDependencies = rootSession.getProjectDependencyGraph()
+                        .getUpstreamProjects(mavenProject, true);
+                    // negate size for descending order
+                    secondaryOrder = -upstreamDependencies.size();
+                }
+                service.submit(primaryOrder, secondaryOrder, () -> {
                     Thread currentThread = Thread.currentThread();
                     String originalThreadName = currentThread.getName();
                     MavenProject project = projectSegment.getProject();
