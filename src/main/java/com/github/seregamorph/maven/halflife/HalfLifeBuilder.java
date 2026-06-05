@@ -3,6 +3,7 @@ package com.github.seregamorph.maven.halflife;
 import com.github.seregamorph.maven.halflife.graph.ConcurrencyDependencyGraph2;
 import com.github.seregamorph.maven.halflife.graph.MavenProjectPart;
 import com.github.seregamorph.maven.halflife.graph.ProjectPart;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -147,7 +148,8 @@ public class HalfLifeBuilder implements Builder {
                 logger.debug("Scheduling: {}", projectSegment);
                 int primaryOrder;
                 int secondaryOrder;
-                if (mavenProjectPart.getPart() == ProjectPart.MAIN) {
+                if (mavenProjectPart.getPart() == ProjectPart.MAIN
+                    || Arrays.asList("Config", "snapshotting", "authz-domain").contains(mavenProject.getArtifactId())) {
                     primaryOrder = 0;
                     List<MavenProject> downstreamDependencies = rootSession.getProjectDependencyGraph()
                         .getDownstreamProjects(mavenProject, false);
