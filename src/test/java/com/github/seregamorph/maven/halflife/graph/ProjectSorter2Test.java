@@ -8,8 +8,12 @@ import static com.github.seregamorph.maven.halflife.graph.TestUtils.moduleDepend
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.parentModel;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.project;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Properties;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 import org.junit.jupiter.api.Test;
@@ -18,6 +22,10 @@ class ProjectSorter2Test {
 
     @Test
     public void shouldSort() throws CycleDetectedException {
+        var session = mock(MavenSession.class);
+        when(session.getSystemProperties()).thenReturn(new Properties());
+        when(session.getUserProperties()).thenReturn(new Properties());
+
         var parent = project("parent");
         var app = project("app");
         var core = project("core");
@@ -37,7 +45,7 @@ class ProjectSorter2Test {
             junitJupiterTestDependency()
         ));
 
-        var projectSorter = new ProjectSorter2(List.of(app, core, parent, testUtils));
+        var projectSorter = new ProjectSorter2(session, List.of(app, core, parent, testUtils));
         assertEquals(List.of(
             new MavenProjectPart(parent, MAIN),
             new MavenProjectPart(core, MAIN),

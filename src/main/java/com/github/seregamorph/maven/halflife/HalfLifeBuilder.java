@@ -78,7 +78,7 @@ public class HalfLifeBuilder implements Builder {
             Map<MavenProject, ProjectSegment> projectBuildMap = projectBuilds.selectSegment(taskSegment);
             try {
                 ConcurrencyDependencyGraph2 analyzer =
-                    new ConcurrencyDependencyGraph2(segmentProjectBuilds, session.getProjectDependencyGraph());
+                    new ConcurrencyDependencyGraph2(session, segmentProjectBuilds);
                 new Scheduler(session, reactorContext, service, analyzer, taskSegment, projectBuildMap)
                     .multiThreadedProjectTaskSegmentBuild();
                 if (reactorContext.getReactorBuildStatus().isHalted()) {

@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ProjectDependencyGraph;
 import org.apache.maven.lifecycle.internal.ProjectBuildList;
 import org.apache.maven.project.DuplicateProjectException;
@@ -25,10 +26,10 @@ public class ConcurrencyDependencyGraph2 {
     private final ProjectDependencyGraph2 projectDependencyGraph;
 
     public ConcurrencyDependencyGraph2(
-        ProjectBuildList projectBuilds,
-        ProjectDependencyGraph projectDependencyGraph
+        MavenSession session,
+        ProjectBuildList projectBuilds
     ) throws CycleDetectedException, DuplicateProjectException {
-        this(projects(projectBuilds), getProjectDependencyGraph2(projectDependencyGraph));
+        this(projects(projectBuilds), getProjectDependencyGraph2(session));
     }
 
     ConcurrencyDependencyGraph2(
@@ -45,11 +46,12 @@ public class ConcurrencyDependencyGraph2 {
         return projects;
     }
 
-    private static FilteredProjectDependencyGraph2 getProjectDependencyGraph2(
-        ProjectDependencyGraph projectDependencyGraph
-    ) throws CycleDetectedException, DuplicateProjectException {
+    private static FilteredProjectDependencyGraph2 getProjectDependencyGraph2(MavenSession session)
+        throws CycleDetectedException, DuplicateProjectException {
+        ProjectDependencyGraph projectDependencyGraph = session.getProjectDependencyGraph();
         List<MavenProject> allProjects = projectDependencyGraph.getAllProjects();
-        DefaultProjectDependencyGraph2 defaultProjectDependencyGraph2 = new DefaultProjectDependencyGraph2(allProjects);
+        DefaultProjectDependencyGraph2 defaultProjectDependencyGraph2 =
+            new DefaultProjectDependencyGraph2(session, allProjects);
         List<MavenProject> sortedProjects = projectDependencyGraph.getSortedProjects();
         return new FilteredProjectDependencyGraph2(defaultProjectDependencyGraph2, sortedProjects);
     }
@@ -81,9 +83,9 @@ public class ConcurrencyDependencyGraph2 {
     private List<MavenProjectPart> getSchedulableNewProcesses(MavenProjectPart finishedProjectPart) {
         List<MavenProjectPart> result = new ArrayList<>();
         for (MavenProjectPart dependentProjectPart :
-                projectDependencyGraph.getDirectDownstreamProjects(finishedProjectPart)) {
+            projectDependencyGraph.getDirectDownstreamProjects(finishedProjectPart)) {
             List<MavenProjectPart> upstreamProjects =
-                    projectDependencyGraph.getDirectUpstreamProjects(dependentProjectPart);
+                projectDependencyGraph.getDirectUpstreamProjects(dependentProjectPart);
             if (finishedProjects.containsAll(upstreamProjects)) {
                 result.add(dependentProjectPart);
             }

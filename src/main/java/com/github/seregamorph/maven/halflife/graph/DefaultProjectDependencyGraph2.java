@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.DuplicateProjectException;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
@@ -24,9 +25,10 @@ public class DefaultProjectDependencyGraph2 implements ProjectDependencyGraph2 {
     private final Map<String, MavenProjectPart> projectParts;
 
     public DefaultProjectDependencyGraph2(
+        MavenSession session,
         Collection<MavenProject> projects
     ) throws CycleDetectedException, DuplicateProjectException {
-        this.sorter = new ProjectSorter2(projects);
+        this.sorter = new ProjectSorter2(session, projects);
         List<MavenProjectPart> sorted = this.sorter.getSortedProjectParts();
         this.order = new HashMap<>(sorted.size());
         this.projectParts = new HashMap<>(sorted.size());

@@ -1,5 +1,6 @@
 package com.github.seregamorph.maven.halflife.graph;
 
+import com.github.seregamorph.maven.halflife.SkipPartSplitUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -7,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.maven.artifact.ArtifactUtils;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Extension;
 import org.apache.maven.model.Parent;
@@ -29,7 +31,7 @@ public class ProjectSorter2 {
 
     private final List<MavenProjectPart> sortedProjectParts;
 
-    public ProjectSorter2(Collection<MavenProject> projects) throws CycleDetectedException {
+    public ProjectSorter2(MavenSession session, Collection<MavenProject> projects) throws CycleDetectedException {
         // groupId:artifactId:version(part) -> project
         Map<String, MavenProjectPart> projectPartMap = new HashMap<>(projects.size() * 2);
 
@@ -71,7 +73,7 @@ public class ProjectSorter2 {
 
             for (Dependency dependency : project.getDependencies()) {
                 // modules and libraries
-                if (isAddDependency(projectPart.getPart(), dependency.getScope())) {
+                if (isAddDependency(session, projectPart, dependency.getScope())) {
                     addEdge(
                         vertexMap,
                         projectPartVertex,
@@ -147,8 +149,13 @@ public class ProjectSorter2 {
         this.sortedProjectParts = Collections.unmodifiableList(sortedProjects);
     }
 
-    private static boolean isAddDependency(ProjectPart part, String scope) {
-        if (part == ProjectPart.MAIN) {
+    private static boolean isAddDependency(MavenSession session, MavenProjectPart projectPart, String scope) {
+        boolean skipPartSplit = SkipPartSplitUtils.isSkipPartSplit(session, projectPart.getProject());
+        if (skipPartSplit) {
+            return true;
+        }
+
+        if (projectPart.getPart() == ProjectPart.MAIN) {
             return !"test".equals(scope);
         } else {
             return "test".equals(scope);

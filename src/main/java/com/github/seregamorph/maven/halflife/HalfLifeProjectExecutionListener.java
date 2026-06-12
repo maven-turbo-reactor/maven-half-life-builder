@@ -1,9 +1,11 @@
 package com.github.seregamorph.maven.halflife;
 
+import com.github.seregamorph.maven.halflife.graph.MavenProjectPart;
 import com.github.seregamorph.maven.halflife.graph.ProjectPart;
 import java.util.Arrays;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ProjectExecutionEvent;
 import org.apache.maven.execution.ProjectExecutionListener;
 import org.apache.maven.plugin.MojoExecution;
@@ -24,14 +26,21 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
     @Override
     public void beforeProjectLifecycleExecution(ProjectExecutionEvent event) {
         CurrentProjectExecution.ifPresent(execution -> {
+            MavenProjectPart projectPart = new MavenProjectPart(event.getProject(), execution.part);
             event.getExecutionPlan().removeIf(mojoExecution -> {
-                return !isExecuteMojo(execution.part, mojoExecution);
+                return !isExecuteMojo(event.getSession(), projectPart, mojoExecution);
             });
         });
     }
 
-    static boolean isExecuteMojo(ProjectPart part, MojoExecution mojoExecution) {
+    static boolean isExecuteMojo(MavenSession session, MavenProjectPart projectPart, MojoExecution mojoExecution) {
+        boolean skipPartSplit = SkipPartSplitUtils.isSkipPartSplit(session, projectPart.getProject());
+        if (skipPartSplit) {
+            return projectPart.getPart() == ProjectPart.MAIN;
+        }
+
         String phase = getLifecyclePhase(mojoExecution);
+        // TODO support Maven 4
         boolean isMainPhaseMojo = Arrays.asList(
             // "clean" lifecycle
             "pre-clean",
@@ -55,7 +64,7 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
             "package" // todo support test-jar
         ).contains(phase);
 
-        if (part == ProjectPart.MAIN) {
+        if (projectPart.getPart() == ProjectPart.MAIN) {
             return isMainPhaseMojo;
         } else {
             return !isMainPhaseMojo;
