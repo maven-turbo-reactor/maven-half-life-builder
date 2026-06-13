@@ -22,18 +22,15 @@ The build phases of the module are separated like this (some intermediate phases
 The major outcome of this approach is better utilization of multi-core CPUs by multi-module projects. The advantage can be more than 35% in boost.
 
 ## How to setup extension:
-First, you need to build it locally as there are no public releases so far:
-```shell
-./mvnw clean install
-```
 
 Configure your project `.mvn/extensions.xml`
 ```xml
 <extensions>
     <extension>
+        <!-- https://github.com/maven-turbo-reactor/maven-half-life-builder -->
         <groupId>com.github.seregamorph</groupId>
         <artifactId>maven-half-life-builder</artifactId>
-        <version>0.1-SNAPSHOT</version>
+        <version>0.1</version>
     </extension>
 </extensions>
 ```
@@ -41,3 +38,10 @@ and specify custom builder on the command line to enable it, also specify the nu
 ```shell
 mvn clean install -bhalf-life -T1C
 ```
+To enable this extension by default, add line to `.mvn/maven.config` under root of your project:
+```
+-bhalf-life
+-T1C
+```
+Note, that for many setups, e.g. Apple MacBook Pro, `-T0.5C` can be more efficient and faster than `-T1C` (as only half
+of the CPU cores are powerful).
