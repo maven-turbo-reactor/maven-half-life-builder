@@ -11,7 +11,7 @@ public final class MavenProjectPart {
     private final MavenProject project;
     private final ProjectPart part;
 
-    MavenProjectPart(MavenProject project, ProjectPart part) {
+    public MavenProjectPart(MavenProject project, ProjectPart part) {
         this.project = Objects.requireNonNull(project, "project");
         this.part = part;
     }

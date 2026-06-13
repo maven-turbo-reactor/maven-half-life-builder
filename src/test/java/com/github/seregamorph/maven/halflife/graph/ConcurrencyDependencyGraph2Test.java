@@ -8,8 +8,12 @@ import static com.github.seregamorph.maven.halflife.graph.TestUtils.moduleDepend
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.parentModel;
 import static com.github.seregamorph.maven.halflife.graph.TestUtils.project;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Properties;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.DuplicateProjectException;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 import org.junit.jupiter.api.Test;
@@ -18,6 +22,10 @@ class ConcurrencyDependencyGraph2Test {
 
     @Test
     public void shouldSort() throws CycleDetectedException, DuplicateProjectException {
+        var session = mock(MavenSession.class);
+        when(session.getSystemProperties()).thenReturn(new Properties());
+        when(session.getUserProperties()).thenReturn(new Properties());
+
         var parent = project("parent");
         var app = project("app");
         var core = project("core");
@@ -38,7 +46,7 @@ class ConcurrencyDependencyGraph2Test {
         ));
 
         var projects = List.of(parent, app, core, testUtils);
-        var defaultProjectDependencyGraph = new DefaultProjectDependencyGraph2(projects);
+        var defaultProjectDependencyGraph = new DefaultProjectDependencyGraph2(session, projects);
         var filteredProjectDependencyGraph = new FilteredProjectDependencyGraph2(defaultProjectDependencyGraph,
             projects);
         var analyzer = new ConcurrencyDependencyGraph2(projects, filteredProjectDependencyGraph);
