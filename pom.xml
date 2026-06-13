@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>maven-half-life-builder</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.3-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>maven-half-life-builder</name>
     <description>
@@ -42,7 +42,7 @@
 
     <properties>
         <!-- https://maven.apache.org/guides/mini/guide-reproducible-builds.html -->
-        <project.build.outputTimestamp>2026-06-13T12:35:17Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2026-06-13T15:16:18Z</project.build.outputTimestamp>
     </properties>
 
     <dependencies>
