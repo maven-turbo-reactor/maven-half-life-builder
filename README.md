@@ -30,7 +30,7 @@ Configure your project `.mvn/extensions.xml`
         <!-- https://github.com/maven-turbo-reactor/maven-half-life-builder -->
         <groupId>com.github.seregamorph</groupId>
         <artifactId>maven-half-life-builder</artifactId>
-        <version>0.1</version>
+        <version>0.2</version>
     </extension>
 </extensions>
 ```
