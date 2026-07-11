@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 class HalfLifeProjectExecutionListenerTest {
 
     @Test
-    public void shouldExecuteMojoInMain() {
+    public void shouldExecuteMojoInMainNoTestJar() {
         var mainPhases = List.of(
             // "clean" lifecycle
             "pre-clean",
@@ -64,18 +64,82 @@ class HalfLifeProjectExecutionListenerTest {
         var mainProjectPart = new MavenProjectPart(project, MAIN);
         var testProjectPart = new MavenProjectPart(project, TEST);
         for (var mainPhase : mainPhases) {
-            assertTrue(HalfLifeProjectExecutionListener.isExecuteMojo(session, mainProjectPart,
+            assertTrue(HalfLifeProjectExecutionListener.isExecuteMojo(false, session, mainProjectPart,
                     mojoExecution(mainPhase)),
                 "Should execute mojo phase " + mainPhase + " for part MAIN");
-            assertFalse(HalfLifeProjectExecutionListener.isExecuteMojo(session, testProjectPart,
+            assertFalse(HalfLifeProjectExecutionListener.isExecuteMojo(false, session, testProjectPart,
                     mojoExecution(mainPhase)),
                 "Should not execute mojo phase " + mainPhase + " for part TEST");
         }
         for (var testPhase : testPhases) {
-            assertTrue(HalfLifeProjectExecutionListener.isExecuteMojo(session, testProjectPart,
+            assertTrue(HalfLifeProjectExecutionListener.isExecuteMojo(false, session, testProjectPart,
                     mojoExecution(testPhase)),
                 "Should execute mojo phase " + testPhase + " for part TEST");
-            assertFalse(HalfLifeProjectExecutionListener.isExecuteMojo(session, mainProjectPart,
+            assertFalse(HalfLifeProjectExecutionListener.isExecuteMojo(false, session, mainProjectPart,
+                    mojoExecution(testPhase)),
+                "Should not execute mojo phase " + testPhase + " for part MAIN");
+        }
+    }
+
+    @Test
+    public void shouldExecuteMojoInMainWithTestJar() {
+        var mainPhases = List.of(
+            // "clean" lifecycle
+            "pre-clean",
+            "clean",
+            "post-clean",
+            // "site" lifecycle
+            "pre-site",
+            "site",
+            "post-site",
+            "site-deploy",
+            // "default" lifecycle
+            "validate",
+            "initialize",
+            "generate-sources",
+            "process-sources",
+            "generate-resources",
+            "process-resources",
+            "compile",
+            "process-classes",
+            "generate-test-sources",
+            "process-test-sources",
+            "generate-test-resources",
+            "process-test-resources",
+            "test-compile",
+            "process-test-classes",
+            "prepare-package",
+            "package"
+        );
+        var testPhases = List.of(
+            "test",
+            "pre-integration-test",
+            "integration-test",
+            "post-integration-test",
+            "verify",
+            "install",
+            "deploy");
+
+        var session = mock(MavenSession.class);
+        when(session.getSystemProperties()).thenReturn(new Properties());
+        when(session.getUserProperties()).thenReturn(new Properties());
+        var project = mock(MavenProject.class);
+        when(project.getProperties()).thenReturn(new Properties());
+        var mainProjectPart = new MavenProjectPart(project, MAIN);
+        var testProjectPart = new MavenProjectPart(project, TEST);
+        for (var mainPhase : mainPhases) {
+            assertTrue(HalfLifeProjectExecutionListener.isExecuteMojo(true, session, mainProjectPart,
+                    mojoExecution(mainPhase)),
+                "Should execute mojo phase " + mainPhase + " for part MAIN");
+            assertFalse(HalfLifeProjectExecutionListener.isExecuteMojo(true, session, testProjectPart,
+                    mojoExecution(mainPhase)),
+                "Should not execute mojo phase " + mainPhase + " for part TEST");
+        }
+        for (var testPhase : testPhases) {
+            assertTrue(HalfLifeProjectExecutionListener.isExecuteMojo(true, session, testProjectPart,
+                    mojoExecution(testPhase)),
+                "Should execute mojo phase " + testPhase + " for part TEST");
+            assertFalse(HalfLifeProjectExecutionListener.isExecuteMojo(true, session, mainProjectPart,
                     mojoExecution(testPhase)),
                 "Should not execute mojo phase " + testPhase + " for part MAIN");
         }

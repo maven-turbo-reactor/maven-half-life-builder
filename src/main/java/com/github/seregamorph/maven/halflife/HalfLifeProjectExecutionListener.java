@@ -26,21 +26,23 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
     @Override
     public void beforeProjectLifecycleExecution(ProjectExecutionEvent event) {
         CurrentProjectExecution.ifPresent(execution -> {
+            boolean hasTestJar = TestJarSupport.hasTestJar(event.getExecutionPlan());
             MavenProjectPart projectPart = new MavenProjectPart(event.getProject(), execution.part);
             event.getExecutionPlan().removeIf(mojoExecution -> {
-                return !isExecuteMojo(event.getSession(), projectPart, mojoExecution);
+                return !isExecuteMojo(hasTestJar, event.getSession(), projectPart, mojoExecution);
             });
         });
     }
 
-    static boolean isExecuteMojo(MavenSession session, MavenProjectPart projectPart, MojoExecution mojoExecution) {
+    static boolean isExecuteMojo(boolean hasTestJar, MavenSession session,
+                                 MavenProjectPart projectPart, MojoExecution mojoExecution) {
         boolean skipPartSplit = SkipPartSplitUtils.isSkipPartSplit(session, projectPart.getProject());
         if (skipPartSplit) {
             return projectPart.getPart() == ProjectPart.MAIN;
         }
 
         String phase = getLifecyclePhase(mojoExecution);
-        // TODO support Maven 4
+        // TODO #5 support Maven 4
         boolean isMainPhaseMojo = Arrays.asList(
             // "clean" lifecycle
             "pre-clean",
@@ -61,8 +63,20 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
             "compile",
             "process-classes",
             "prepare-package",
-            "package" // todo support test-jar
+            "package"
         ).contains(phase);
+        if (hasTestJar) {
+            // if project has the "test-jar" goal, it should compile (but not run)
+            // the test sources in the MAIN part as well
+            isMainPhaseMojo = isMainPhaseMojo || Arrays.asList(
+                "generate-test-sources",
+                "process-test-sources",
+                "generate-test-resources",
+                "process-test-resources",
+                "test-compile",
+                "process-test-classes"
+            ).contains(phase);
+        }
 
         if (projectPart.getPart() == ProjectPart.MAIN) {
             return isMainPhaseMojo;
