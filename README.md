@@ -21,7 +21,7 @@ The build phases of the module are separated like this (some intermediate phases
 
 The major outcome of this approach is better utilization of multi-core CPUs by multi-module projects. The advantage can be more than 35% in boost.
 
-## How to setup extension:
+## How to set up extension:
 
 Configure your project `.mvn/extensions.xml`
 ```xml
@@ -45,3 +45,7 @@ To enable this extension by default, add line to `.mvn/maven.config` under root 
 ```
 Note, that for many setups, e.g. Apple MacBook Pro, `-T0.5C` can be more efficient and faster than `-T1C` (as only half
 of the CPU cores are powerful).
+
+## Naming
+The "half-life" naming refers to the [term](https://en.wikipedia.org/wiki/Half-life) from nuclear physics
+meaning the radioactive decay. This also refers to Maven multi-module build scheduler which is called "reactor".
