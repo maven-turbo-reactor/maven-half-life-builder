@@ -1,15 +1,14 @@
 package com.github.seregamorph.maven.halflife;
 
-import com.github.seregamorph.maven.halflife.graph.MavenProjectPart;
 import com.github.seregamorph.maven.halflife.graph.ProjectPart;
 import java.util.Arrays;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ProjectExecutionEvent;
 import org.apache.maven.execution.ProjectExecutionListener;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Sergey Chernov
@@ -27,23 +26,20 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
     public void beforeProjectLifecycleExecution(ProjectExecutionEvent event) {
         CurrentProjectExecution.ifPresent(execution -> {
             boolean hasTestJar = TestJarSupport.hasTestJar(event.getExecutionPlan());
-            MavenProjectPart projectPart = new MavenProjectPart(event.getProject(), execution.part);
             event.getExecutionPlan().removeIf(mojoExecution -> {
-                return !isExecuteMojo(hasTestJar, event.getSession(), projectPart, mojoExecution);
+                // TODO if isSkipPartSplit, there should not be TEST project part at all (assert)
+                boolean skipPartSplit = SkipPartSplitUtils.isSkipPartSplit(event.getSession(), event.getProject());
+                ProjectPart mojoProjectPart = skipPartSplit ? ProjectPart.MAIN :
+                    getProjectPart(hasTestJar, mojoExecution);
+                return mojoProjectPart != execution.part;
             });
         });
     }
 
-    static boolean isExecuteMojo(boolean hasTestJar, MavenSession session,
-                                 MavenProjectPart projectPart, MojoExecution mojoExecution) {
-        boolean skipPartSplit = SkipPartSplitUtils.isSkipPartSplit(session, projectPart.getProject());
-        if (skipPartSplit) {
-            return projectPart.getPart() == ProjectPart.MAIN;
-        }
-
+    static ProjectPart getProjectPart(boolean hasTestJar, MojoExecution mojoExecution) {
         String phase = getLifecyclePhase(mojoExecution);
-        // TODO #5 support Maven 4
-        boolean isMainPhaseMojo = Arrays.asList(
+        // TODO #5 support Maven 4 phases
+        if (Arrays.asList(
             // "clean" lifecycle
             "pre-clean",
             "clean",
@@ -64,27 +60,28 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
             "process-classes",
             "prepare-package",
             "package"
-        ).contains(phase);
+        ).contains(phase)) {
+            return ProjectPart.MAIN;
+        }
         if (hasTestJar) {
             // if project has the "test-jar" goal, it should compile (but not run)
             // the test sources in the MAIN part as well
-            isMainPhaseMojo = isMainPhaseMojo || Arrays.asList(
+            if (Arrays.asList(
                 "generate-test-sources",
                 "process-test-sources",
                 "generate-test-resources",
                 "process-test-resources",
                 "test-compile",
                 "process-test-classes"
-            ).contains(phase);
+            ).contains(phase)) {
+                return ProjectPart.MAIN;
+            }
         }
 
-        if (projectPart.getPart() == ProjectPart.MAIN) {
-            return isMainPhaseMojo;
-        } else {
-            return !isMainPhaseMojo;
-        }
+        return ProjectPart.TEST;
     }
 
+    @Nullable
     private static String getLifecyclePhase(MojoExecution mojoExecution) {
         String phase = mojoExecution.getLifecyclePhase();
         if (phase == null) {
