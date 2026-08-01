@@ -38,6 +38,11 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
 
     static ProjectPart getProjectPart(boolean hasTestJar, MojoExecution mojoExecution) {
         String phase = getLifecyclePhase(mojoExecution);
+        if (phase == null) {
+            // reinsure for CLI goal executions
+            return ProjectPart.MAIN;
+        }
+
         // TODO #5 support Maven 4 phases
         if (Arrays.asList(
             // "clean" lifecycle
