@@ -9,7 +9,7 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.junit.jupiter.api.Test;
 
-class HalfLifeProjectExecutionListenerTest {
+class HalfLifeProjectExecutionListenerMaven3Test {
 
     @Test
     public void shouldExecuteMojoInMainNoTestJar() {
@@ -33,7 +33,7 @@ class HalfLifeProjectExecutionListenerTest {
             "compile",
             "process-classes",
             "prepare-package",
-            "package" // todo support test-jar
+            "package"
         );
         var testPhases = List.of("generate-test-sources",
             "process-test-sources",

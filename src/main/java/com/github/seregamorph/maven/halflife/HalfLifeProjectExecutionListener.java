@@ -43,7 +43,17 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
             return ProjectPart.MAIN;
         }
 
-        // TODO #5 support Maven 4 phases
+        // exception: Maven 4 "before:all" in MAIN, but "all" and "after:all" are TEST
+        if ("before:all".equals(phase)) {
+            return ProjectPart.MAIN;
+        }
+
+        // Since Maven 4
+        int colonSep = phase.indexOf(':');
+        if (colonSep > 0) {
+            phase = phase.substring(colonSep + 1);
+        }
+
         if (Arrays.asList(
             // "clean" lifecycle
             "pre-clean",
@@ -57,6 +67,9 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
             // "default" lifecycle
             "validate",
             "initialize",
+            "build",
+            "sources",
+            "resources",
             "generate-sources",
             "process-sources",
             "generate-resources",
@@ -64,6 +77,7 @@ public class HalfLifeProjectExecutionListener implements ProjectExecutionListene
             "compile",
             "process-classes",
             "prepare-package",
+            "ready",
             "package"
         ).contains(phase)) {
             return ProjectPart.MAIN;
